@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Film, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -45,11 +45,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
-            <Film className="w-8 h-8 text-primary" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="Nars VHD"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Media Catalog</h1>
-          <p className="text-muted-foreground mt-2 text-sm">Gerencie seu catálogo de filmes e séries</p>
+          <h1 className="text-3xl font-bold tracking-tight">Nars VHD</h1>
+          <p className="text-muted-foreground mt-2 text-sm">Gerenciador</p>
         </div>
 
         {/* Card */}
@@ -62,7 +66,7 @@ export default function LoginPage() {
               <input
                 {...register('email')}
                 type="email"
-                placeholder="admin@local"
+                placeholder="seu@email.com"
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               />
               {errors.email && <p className="text-destructive text-xs mt-1">{errors.email.message}</p>}
