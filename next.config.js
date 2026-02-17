@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
+  outputFileTracingExcludes: {
+    '*': [
+      './node_modules/@swc/core-linux-x64-gnu',
+      './node_modules/@swc/core-linux-x64-musl',
+    ],
   },
   images: {
     remotePatterns: [
