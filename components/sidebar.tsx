@@ -34,7 +34,8 @@ export function Sidebar() {
             <Film className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <p className="font-bold text-sm leading-tight" style={{ fontFamily: 'Syne, sans-serif' }}>Media Catalog</p>
+            <p className="font-bold text-sm leading-tight" style={{ fontFamily: 'Syne, sans-serif' }}>Nars VHD</p>
+<p className="text-xs text-muted-foreground">Gerenciador</p>
             <p className="text-xs text-muted-foreground">P1 & P2</p>
           </div>
         </div>
