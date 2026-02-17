@@ -1,0 +1,254 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
+import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
+import { Pencil, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Badge, PBadge } from '@/components/badges'
+import { SearchInput } from '@/components/search-input'
+import { EditTitleModal } from '@/components/edit-title-modal'
+
+interface Title {
+  id: string
+  title: string
+  type: string
+  releaseYear: number | null
+  posterUrl: string | null
+  hasP1: boolean
+  hasP2: boolean
+  internalStatus: string
+  tvStatus: string | null
+  overview: string | null
+  tmdbId: number
+  tvSeasons: number | null
+  tvEpisodes: number | null
+  genres: any
+  createdBy: { name: string }
+}
+
+export default function TitlesPage() {
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'ADMIN'
+
+  const [titles, setTitles] = useState<Title[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [pages, setPages] = useState(1)
+  const [loading, setLoading] = useState(true)
+
+  const [search, setSearch] = useState('')
+  const [filterType, setFilterType] = useState('')
+  const [filterP1, setFilterP1] = useState('')
+  const [filterP2, setFilterP2] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+
+  const [editTitle, setEditTitle] = useState<Title | null>(null)
+
+  const fetchTitles = useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: '20',
+      ...(search && { search }),
+      ...(filterType && { type: filterType }),
+      ...(filterP1 && { p1: filterP1 }),
+      ...(filterP2 && { p2: filterP2 }),
+      ...(filterStatus && { internalStatus: filterStatus }),
+    })
+    const res = await fetch(`/api/titles?${params}`)
+    const data = await res.json()
+    setTitles(data.titles || [])
+    setTotal(data.total || 0)
+    setPages(data.pages || 1)
+    setLoading(false)
+  }, [page, search, filterType, filterP1, filterP2, filterStatus])
+
+  useEffect(() => {
+    const t = setTimeout(fetchTitles, search ? 300 : 0)
+    return () => clearTimeout(t)
+  }, [fetchTitles])
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Excluir este título?')) return
+    const res = await fetch(`/api/titles/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      toast.success('Título excluído')
+      fetchTitles()
+    } else {
+      toast.error('Erro ao excluir')
+    }
+  }
+
+  return (
+    <div className="p-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Conteúdo</h1>
+        <p className="text-muted-foreground mt-1">{total} títulos encontrados</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <SearchInput
+          value={search}
+          onChange={(v) => { setSearch(v); setPage(1) }}
+          placeholder="Buscar títulos..."
+          className="w-64"
+        />
+
+        <select
+          value={filterType}
+          onChange={(e) => { setFilterType(e.target.value); setPage(1) }}
+          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+          <option value="">Todos os tipos</option>
+          <option value="MOVIE">Filmes</option>
+          <option value="TV">Séries</option>
+        </select>
+
+        <select
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
+          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+          <option value="">Todos os status</option>
+          <option value="AGUARDANDO_DOWNLOAD">Aguardando</option>
+          <option value="DISPONIVEL">Disponível</option>
+          <option value="INDISPONIVEL">Indisponível</option>
+        </select>
+
+        <select
+          value={filterP1}
+          onChange={(e) => { setFilterP1(e.target.value); setPage(1) }}
+          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+          <option value="">P1: Todos</option>
+          <option value="true">P1: Sim</option>
+          <option value="false">P1: Não</option>
+        </select>
+
+        <select
+          value={filterP2}
+          onChange={(e) => { setFilterP2(e.target.value); setPage(1) }}
+          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        >
+          <option value="">P2: Todos</option>
+          <option value="true">P2: Sim</option>
+          <option value="false">P2: Não</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Poster</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ano</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P1</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P2</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                {isAdmin && <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-16 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                  </td>
+                </tr>
+              ) : titles.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-16 text-center text-muted-foreground">
+                    <p className="text-lg font-medium">Nenhum título encontrado</p>
+                    <p className="text-sm mt-1">Tente ajustar os filtros</p>
+                  </td>
+                </tr>
+              ) : (
+                titles.map((t) => (
+                  <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                    <td className="py-3 px-4">
+                      {t.posterUrl ? (
+                        <div className="w-9 h-14 rounded overflow-hidden bg-muted shrink-0">
+                          <img src={t.posterUrl} alt={t.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-9 h-14 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">?</div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <p className="font-medium text-sm">{t.title}</p>
+                      {t.type === 'TV' && t.tvStatus && (
+                        <div className="mt-1"><Badge status={t.tvStatus as any} /></div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4"><Badge status={t.type as any} /></td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{t.releaseYear || '—'}</td>
+                    <td className="py-3 px-4"><PBadge type="P1" active={t.hasP1} /></td>
+                    <td className="py-3 px-4"><PBadge type="P2" active={t.hasP2} /></td>
+                    <td className="py-3 px-4"><Badge status={t.internalStatus as any} /></td>
+                    {isAdmin && (
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setEditTitle(t)}
+                            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(t.id)}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {pages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Página {page} de {pages} — {total} títulos
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg border border-border hover:bg-secondary disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                disabled={page === pages}
+                className="p-2 rounded-lg border border-border hover:bg-secondary disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {editTitle && (
+        <EditTitleModal
+          title={editTitle}
+          onClose={() => setEditTitle(null)}
+          onSaved={() => { setEditTitle(null); fetchTitles() }}
+        />
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-media}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mediapass}
+      POSTGRES_DB: ${POSTGRES_DB:-mediacatalog}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-media}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-media}:${POSTGRES_PASSWORD:-mediapass}@db:5432/${POSTGRES_DB:-mediacatalog}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+    command: >
+      sh -c "npx prisma migrate deploy && npx prisma db seed && node server.js"
+
+volumes:
+  postgres_data:
