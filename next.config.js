@@ -1,11 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  outputFileTracingExcludes: {
-    '*': [
-      './node_modules/@swc/core-linux-x64-gnu',
-      './node_modules/@swc/core-linux-x64-musl',
-    ],
-  },
   images: {
     remotePatterns: [
       {
@@ -14,6 +8,16 @@ const nextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    return config
+  },
 }
 
 module.exports = nextConfig
+```
+
+Salve com **CTRL + S** e feche.
+
+Depois no **Git Bash**, vamos também testar o build localmente. Digite:
+```
+pnpm install
