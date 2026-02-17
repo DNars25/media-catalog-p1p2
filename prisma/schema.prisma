@@ -88,6 +88,7 @@ model Request {
   type             TitleType
   tmdbId           Int?
   notes            String?         @db.Text
+  audioType        String?
   preferredSystem  PreferredSystem?
   status           RequestStatus   @default(ABERTO)
   createdById      String
