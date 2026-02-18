@@ -22,18 +22,14 @@ function CadastroModal({ item, onClose, onSuccess }: { item: TmdbItem; onClose: 
   async function handleCadastrar() {
     setLoading(true);
     try {
-      const res = await fetch("/api/titles", {
+      const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tmdbId: item.tmdbId,
-          title: item.title,
+          requestedTitle: item.title,
           type: "MOVIE",
-          posterPath: item.posterPath,
-          overview: item.overview,
-          releaseDate: item.releaseDate,
-          availableP1: p1,
-          availableP2: p2,
+          tmdbId: item.tmdbId,
+          posterUrl: item.posterPath,
         }),
       });
       const data = await res.json();
