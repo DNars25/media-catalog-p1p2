@@ -87,6 +87,7 @@ model Request {
   requestedTitle   String
   type             TitleType
   tmdbId           Int?
+  posterUrl        String?
   notes            String?         @db.Text
   audioType        String?
   preferredSystem  PreferredSystem?
