@@ -153,7 +153,7 @@ export default function FilmesPage() {
     <div className="p-6">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">🎬 Filmes</h1>
-        <p className="text-zinc-400 text-sm mt-1">Clique em qualquer card para cadastrar o filme no sistema.</p>
+        <p className="text-zinc-400 text-sm mt-1">Clique em qualquer card para solicitar o filme via pedidos.</p>
       </div>
       <Section title="🎥 Em Cartaz Hoje" items={nowPlaying} loading={loadingNow} onCardClick={setSelectedItem} />
       <Section title="🚀 Próximas Estreias" items={upcoming} loading={loadingUp} onCardClick={setSelectedItem} />
