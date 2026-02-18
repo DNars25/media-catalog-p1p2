@@ -50,7 +50,7 @@ function CadastroModal({ item, onClose, onSuccess }: { item: TmdbItem; onClose: 
           type: "TV",
           tmdbId: item.tmdbId,
           posterUrl: item.posterPath,
-          notes: aba === "atualizacao" ? .trim() : notes || null,
+          notes: aba === "atualizacao" ? ("[ATUALIZAÇÃO] " + notes).trim() : notes || null,
         }),
       });
       const data = await res.json();
