@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/titles/new', icon: PlusCircle, label: 'Cadastrar Título' },
   { href: '/dashboard/titles', icon: List, label: 'Conteúdo' },
