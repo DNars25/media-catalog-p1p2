@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Plus, Loader2, ChevronLeft, ChevronRight, X, Search, Film, Tv } from 'lucide-react'
+import { Plus, Loader2, ChevronLeft, ChevronRight, X, Search, Pencil } from 'lucide-react'
 import { Badge } from '@/components/badges'
 import { SearchInput } from '@/components/search-input'
 import { formatDate } from '@/lib/utils'
@@ -32,21 +32,43 @@ interface TMDBResult {
 
 const STATUS_OPTIONS = ['ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']
 
-function AudioMovieModal({ onConfirm, onCancel }: { onConfirm: (audio: string) => void; onCancel: () => void }) {
+// Determines if audio is complete (both dub and leg)
+function isAudioComplete(audio: string | null): boolean {
+  if (!audio) return false
+  return audio.includes('DUBLADO_LEGENDADO') || audio.includes('Dublado + Legendado') || audio === 'TODAS_DUBLADO_LEGENDADO'
+}
+
+function getAudioLabel(audio: string | null): { label: string; complete: boolean } {
+  if (!audio) return { label: '—', complete: false }
+  const map: Record<string, string> = {
+    DUBLADO: '🎙️ Dublado',
+    LEGENDADO: '📝 Legendado',
+    DUBLADO_LEGENDADO: '✅ Dub + Leg',
+    TODAS_DUBLADO: '🎙️ Todas — Dub',
+    TODAS_LEGENDADO: '📝 Todas — Leg',
+    TODAS_DUBLADO_LEGENDADO: '✅ Todas — Dub+Leg',
+  }
+  const label = map[audio] || audio
+  return { label, complete: isAudioComplete(audio) }
+}
+
+function AudioMovieModal({ current, onConfirm, onCancel }: { current?: string | null; onConfirm: (audio: string) => void; onCancel: () => void }) {
+  const isEdit = !!current
+  const options = [
+    { value: 'DUBLADO', label: '🎙️ Dublado' },
+    { value: 'LEGENDADO', label: '📝 Legendado' },
+    { value: 'DUBLADO_LEGENDADO', label: '✅ Dublado + Legendado' },
+  ]
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
       <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold mb-2">Concluir Pedido</h3>
+        <h3 className="text-lg font-bold mb-2">{isEdit ? 'Atualizar Áudio' : 'Concluir Pedido'}</h3>
         <p className="text-sm text-muted-foreground mb-6">Como o conteúdo foi disponibilizado?</p>
         <div className="grid grid-cols-1 gap-3">
-          {[
-            { value: 'DUBLADO', label: '🎙️ Dublado' },
-            { value: 'LEGENDADO', label: '📝 Legendado' },
-            { value: 'DUBLADO_LEGENDADO', label: '✅ Dublado + Legendado' },
-          ].map((opt) => (
+          {options.map((opt) => (
             <button key={opt.value} onClick={() => onConfirm(opt.value)}
-              className="w-full py-3 px-4 rounded-xl border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all text-sm font-medium text-left">
-              {opt.label}
+              className={"w-full py-3 px-4 rounded-xl border transition-all text-sm font-medium text-left " + (current === opt.value ? 'bg-primary/20 border-primary' : 'border-border hover:bg-primary hover:text-primary-foreground hover:border-primary')}>
+              {opt.label} {current === opt.value ? '(atual)' : ''}
             </button>
           ))}
         </div>
@@ -56,10 +78,11 @@ function AudioMovieModal({ onConfirm, onCancel }: { onConfirm: (audio: string) =
   )
 }
 
-function AudioTVModal({ onConfirm, onCancel }: { onConfirm: (audio: string) => void; onCancel: () => void }) {
+function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | null; onConfirm: (audio: string) => void; onCancel: () => void }) {
   const [selected, setSelected] = useState('')
   const [customSeason, setCustomSeason] = useState('')
   const [customAudio, setCustomAudio] = useState('')
+  const isEdit = !!current
 
   const options = [
     { value: 'TODAS_DUBLADO', label: '🎙️ Todas as temporadas — Dublado' },
@@ -80,7 +103,7 @@ function AudioTVModal({ onConfirm, onCancel }: { onConfirm: (audio: string) => v
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
       <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold mb-2">Concluir Pedido — Série</h3>
+        <h3 className="text-lg font-bold mb-2">{isEdit ? 'Atualizar Áudio — Série' : 'Concluir Pedido — Série'}</h3>
         <p className="text-sm text-muted-foreground mb-4">Como o conteúdo foi disponibilizado?</p>
         <div className="grid grid-cols-1 gap-2">
           {options.map((opt) => (
@@ -94,8 +117,7 @@ function AudioTVModal({ onConfirm, onCancel }: { onConfirm: (audio: string) => v
           <div className="mt-4 space-y-3">
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Temporada(s)</label>
-              <input value={customSeason} onChange={(e) => setCustomSeason(e.target.value)}
-                placeholder="Ex: 1, 2 e 3 ou Temporada 1"
+              <input value={customSeason} onChange={(e) => setCustomSeason(e.target.value)} placeholder="Ex: 1, 2 e 3 ou Temporada 1"
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
             <div>
@@ -134,7 +156,7 @@ export default function RequestsPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterType, setFilterType] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [audioModal, setAudioModal] = useState<{ id: string; type: string } | null>(null)
+  const [audioModal, setAudioModal] = useState<{ id: string; type: string; current?: string | null; newStatus?: string } | null>(null)
   const [form, setForm] = useState({ requestedTitle: '', type: 'MOVIE', notes: '', preferredSystem: '', tmdbId: null as number | null, posterUrl: null as string | null, overview: null as string | null, releaseYear: null as number | null })
   const [formLoading, setFormLoading] = useState(false)
   const [tmdbQuery, setTmdbQuery] = useState('')
@@ -189,16 +211,28 @@ export default function RequestsPage() {
     else toast.error('Erro ao criar pedido')
   }
 
-  const handleStatusChange = async (id: string, status: string, type: string) => {
-    if (status === 'CONCLUIDO') { setAudioModal({ id, type }); return }
+  const handleStatusChange = async (id: string, status: string, type: string, currentAudio: string | null) => {
+    if (status === 'CONCLUIDO') {
+      setAudioModal({ id, type, current: currentAudio, newStatus: 'CONCLUIDO' })
+      return
+    }
     await applyStatusChange(id, status, null)
   }
 
   const applyStatusChange = async (id: string, status: string, audioType: string | null) => {
-    const res = await fetch('/api/requests/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, audioType }) })
-    if (res.ok) { toast.success('Status atualizado'); fetch_() }
-    else toast.error('Erro ao atualizar')
+    // If audio is complete, keep CONCLUIDO; otherwise mark as CONCLUIDO but partial
+    const finalStatus = status === 'CONCLUIDO' ? 'CONCLUIDO' : status
+    const res = await fetch('/api/requests/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: finalStatus, audioType }) })
+    if (res.ok) {
+      const complete = isAudioComplete(audioType)
+      toast.success(complete ? '✅ Pedido concluído com Dub + Leg!' : '🎙️ Pedido concluído (parcial) — você pode editar o áudio depois')
+      fetch_()
+    } else toast.error('Erro ao atualizar')
     setAudioModal(null)
+  }
+
+  const handleEditAudio = (r: Request) => {
+    setAudioModal({ id: r.id, type: r.type, current: r.audioType, newStatus: r.status })
   }
 
   const handleDelete = async (id: string) => {
@@ -214,16 +248,22 @@ export default function RequestsPage() {
     setTmdbQuery(''); setTmdbSelected(null); setTmdbResults([])
   }
 
-  const formatAudioType = (audio: string | null) => {
-    if (!audio) return null
-    const map: Record<string, string> = { DUBLADO: '🎙️ Dublado', LEGENDADO: '📝 Legendado', DUBLADO_LEGENDADO: '✅ Dub+Leg', TODAS_DUBLADO: '🎙️ Todas-Dub', TODAS_LEGENDADO: '📝 Todas-Leg', TODAS_DUBLADO_LEGENDADO: '✅ Todas-Dub+Leg' }
-    return map[audio] || audio
-  }
-
   return (
     <div className="p-8">
-      {audioModal && audioModal.type === 'MOVIE' && <AudioMovieModal onConfirm={(a) => applyStatusChange(audioModal.id, 'CONCLUIDO', a)} onCancel={() => setAudioModal(null)} />}
-      {audioModal && audioModal.type === 'TV' && <AudioTVModal onConfirm={(a) => applyStatusChange(audioModal.id, 'CONCLUIDO', a)} onCancel={() => setAudioModal(null)} />}
+      {audioModal && audioModal.type === 'MOVIE' && (
+        <AudioMovieModal
+          current={audioModal.current}
+          onConfirm={(a) => applyStatusChange(audioModal.id, audioModal.newStatus || 'CONCLUIDO', a)}
+          onCancel={() => setAudioModal(null)}
+        />
+      )}
+      {audioModal && audioModal.type === 'TV' && (
+        <AudioTVModal
+          current={audioModal.current}
+          onConfirm={(a) => applyStatusChange(audioModal.id, audioModal.newStatus || 'CONCLUIDO', a)}
+          onCancel={() => setAudioModal(null)}
+        />
+      )}
 
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -267,35 +307,54 @@ export default function RequestsPage() {
               <tr><td colSpan={8} className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : requests.length === 0 ? (
               <tr><td colSpan={8} className="py-16 text-center text-muted-foreground"><p className="text-lg font-medium">Nenhum pedido encontrado</p></td></tr>
-            ) : requests.map((r) => (
-              <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                <td className="py-3 px-4">
-                  <p className="font-medium text-sm">{r.requestedTitle}</p>
-                  {r.linkedTitle && <p className="text-xs text-primary mt-0.5">→ {r.linkedTitle.title}</p>}
-                  {r.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.notes}</p>}
-                </td>
-                <td className="py-3 px-4"><Badge status={r.type as any} /></td>
-                <td className="py-3 px-4">
-                  {isAdmin ? (
-                    <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value, r.type)}
-                      className="bg-muted border border-border rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50">
-                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                    </select>
-                  ) : <Badge status={r.status as any} />}
-                </td>
-                <td className="py-3 px-4 text-xs text-muted-foreground">{formatAudioType(r.audioType) || '—'}</td>
-                <td className="py-3 px-4 text-sm text-muted-foreground">{r.preferredSystem || '—'}</td>
-                <td className="py-3 px-4 text-sm text-muted-foreground">{r.createdBy.name}</td>
-                <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{formatDate(r.createdAt)}</td>
-                {isAdmin && (
-                  <td className="py-3 px-4 text-right">
-                    <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+            ) : requests.map((r) => {
+              const audio = getAudioLabel(r.audioType)
+              return (
+                <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                  <td className="py-3 px-4">
+                    <p className="font-medium text-sm">{r.requestedTitle}</p>
+                    {r.linkedTitle && <p className="text-xs text-primary mt-0.5">→ {r.linkedTitle.title}</p>}
+                    {r.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.notes}</p>}
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td className="py-3 px-4"><Badge status={r.type as any} /></td>
+                  <td className="py-3 px-4">
+                    {isAdmin ? (
+                      <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value, r.type, r.audioType)}
+                        className="bg-muted border border-border rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50">
+                        {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+                      </select>
+                    ) : <Badge status={r.status as any} />}
+                  </td>
+                  <td className="py-3 px-4">
+                    {r.status === 'CONCLUIDO' ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className={"text-xs px-2 py-1 rounded-lg font-medium " + (audio.complete ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400')}>
+                          {audio.label}
+                        </span>
+                        {isAdmin && !audio.complete && (
+                          <button onClick={() => handleEditAudio(r)} title="Atualizar áudio"
+                            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">{r.preferredSystem || '—'}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">{r.createdBy.name}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                  {isAdmin && (
+                    <td className="py-3 px-4 text-right">
+                      <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {pages > 1 && (
