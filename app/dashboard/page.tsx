@@ -1,17 +1,16 @@
 import { prisma } from '@/lib/db'
-import { Film, Download, ClipboardList, Server } from 'lucide-react'
+import { Film, Download, ClipboardList, Tv, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 async function getStats() {
-  const [totalTitles, pendingTitles, openRequests, p1Count, p2Count, movies] = await Promise.all([
+  const [totalTitles, openRequests, awaitingUpdate, movies, tvShows] = await Promise.all([
     prisma.title.count(),
-    prisma.title.count({ where: { internalStatus: 'AGUARDANDO_DOWNLOAD' } }),
     prisma.request.count({ where: { status: 'ABERTO' } }),
-    prisma.title.count({ where: { hasP1: true } }),
-    prisma.title.count({ where: { hasP2: true } }),
+    prisma.title.count({ where: { type: 'TV', internalStatus: 'EM_ANDAMENTO' } }),
     prisma.title.count({ where: { type: 'MOVIE' } }),
+    prisma.title.count({ where: { type: 'TV' } }),
   ])
-  return { totalTitles, pendingTitles, openRequests, p1Count, p2Count, movies }
+  return { totalTitles, openRequests, awaitingUpdate, movies, tvShows }
 }
 
 async function getOpenRequests() {
@@ -60,12 +59,11 @@ export default async function DashboardPage() {
   const open = await getOpenRequests()
 
   const cards = [
-    { label: 'Total', value: stats.totalTitles, icon: Film, color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20', href: '/dashboard/titles' },
-    { label: 'Aguardando', value: stats.pendingTitles, icon: Download, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20', href: '/dashboard/titles?internalStatus=AGUARDANDO_DOWNLOAD' },
+    { label: 'Total no Sistema', value: stats.totalTitles, icon: Film, color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20', href: '/dashboard/titles' },
     { label: 'Pedidos', value: stats.openRequests, icon: ClipboardList, color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20', href: '/dashboard/requests?status=ABERTO' },
-    { label: 'P1', value: stats.p1Count, icon: Server, color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20', href: '/dashboard/titles?p1=true' },
-    { label: 'P2', value: stats.p2Count, icon: Server, color: 'text-primary', bg: 'bg-primary/10 border-primary/20', href: '/dashboard/titles?p2=true' },
+    { label: 'Aguardando Atualização', value: stats.awaitingUpdate, icon: RefreshCw, color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20', href: '/dashboard/titles?type=TV&internalStatus=EM_ANDAMENTO' },
     { label: 'Filmes', value: stats.movies, icon: Film, color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-400/20', href: '/dashboard/titles?type=MOVIE' },
+    { label: 'Séries', value: stats.tvShows, icon: Tv, color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20', href: '/dashboard/titles?type=TV' },
   ]
 
   return (
@@ -76,7 +74,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-6 gap-2 mb-7">
+      <div className="grid grid-cols-5 gap-2 mb-7">
         {cards.map((card) => (
           <Link key={card.label} href={card.href}
             className={"bg-card border rounded-xl p-3 " + card.bg + " hover:scale-[1.02] transition-all"}>
