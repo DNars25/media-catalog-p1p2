@@ -4,12 +4,9 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  Film, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import {
   Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -32,7 +29,6 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
-      {/* Brand */}
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -40,13 +36,12 @@ export function Sidebar() {
           </div>
           <div>
             <p className="font-bold text-sm leading-tight" style={{ fontFamily: 'Syne, sans-serif' }}>Nars VHD</p>
-<p className="text-xs text-muted-foreground">Gerenciador</p>
+            <p className="text-xs text-muted-foreground">Gerenciador</p>
             <p className="text-xs text-muted-foreground">P1 & P2</p>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
           const active = item.href === '/dashboard'
@@ -97,7 +92,6 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* User */}
       <div className="p-3 border-t border-border">
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg mb-1">
           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
