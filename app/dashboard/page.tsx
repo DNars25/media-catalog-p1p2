@@ -34,22 +34,23 @@ async function getOpenRequests() {
 
 function RequestCard({ r, href }: { r: any; href: string }) {
   return (
-    <Link href={href} className="bg-card border border-border rounded-md overflow-hidden hover:border-primary/50 hover:scale-[1.03] transition-all group block">
-      <div className="relative w-full" style={{ paddingBottom: '148%' }}>
+    <Link href={href} className="group block rounded-xl overflow-hidden border border-border hover:border-primary/50 hover:scale-[1.03] transition-all bg-card">
+      <div className="relative w-full" style={{ paddingBottom: '150%' }}>
         <div className="absolute inset-0">
           {r.posterUrl ? (
             <img src={r.posterUrl} alt={r.requestedTitle} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-muted to-muted/30 flex flex-col items-center justify-center p-1">
-              <Film className="w-4 h-4 text-muted-foreground/20 mb-1" />
-              <p className="text-[9px] text-center text-muted-foreground/40 line-clamp-3 leading-tight">{r.requestedTitle}</p>
+            <div className="w-full h-full bg-gradient-to-br from-muted to-muted/30 flex flex-col items-center justify-center p-3">
+              <Film className="w-8 h-8 text-muted-foreground/20 mb-2" />
+              <p className="text-xs text-center text-muted-foreground/40 line-clamp-3 leading-tight">{r.requestedTitle}</p>
             </div>
           )}
-          <div className="absolute top-1 right-1">
-            <span className="bg-red-500/80 text-white px-1 py-0.5 rounded-full font-medium text-[8px]">Aberto</span>
+          <div className="absolute top-2 right-2">
+            <span className="bg-red-500/90 text-white px-2 py-0.5 rounded-full font-medium text-[10px]">Aberto</span>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-1.5 pb-1.5 pt-4">
-            <p className="text-[10px] font-medium text-white line-clamp-1 leading-tight">{r.requestedTitle}</p>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-2 pb-2 pt-8">
+            <p className="text-xs font-semibold text-white line-clamp-2 leading-tight">{r.requestedTitle}</p>
+            <p className="text-[10px] text-white/50 mt-0.5">{r.createdBy.name}</p>
           </div>
         </div>
       </div>
@@ -71,49 +72,60 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="p-4 h-screen flex flex-col overflow-hidden">
-      <div className="mb-3">
-        <h1 className="text-xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-xs mt-0.5">Visão geral do catálogo</p>
+    <div className="p-5">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Visão geral do catálogo</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-6 gap-2 mb-4">
+      {/* Stats */}
+      <div className="grid grid-cols-6 gap-2 mb-6">
         {cards.map((card) => (
           <Link key={card.label} href={card.href}
-            className={"bg-card border rounded-lg p-2.5 " + card.bg + " hover:scale-[1.02] transition-all cursor-pointer"}>
-            <div className={"p-1 rounded-md bg-card border inline-flex mb-1 " + card.bg}>
-              <card.icon className={"w-3 h-3 " + card.color} />
+            className={"bg-card border rounded-xl p-3 " + card.bg + " hover:scale-[1.02] transition-all"}>
+            <div className={"p-1.5 rounded-lg bg-card border inline-flex mb-2 " + card.bg}>
+              <card.icon className={"w-3.5 h-3.5 " + card.color} />
             </div>
-            <p className="text-lg font-bold leading-none">{card.value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{card.label}</p>
+            <p className="text-2xl font-bold">{card.value}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{card.label}</p>
           </Link>
         ))}
       </div>
 
-      {/* Requests grid - split 50/50 */}
-      <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-        {[
-          { label: '🎬 Filmes — Pedidos Abertos', items: open.movies, href: '/dashboard/requests?type=MOVIE&status=ABERTO', empty: 'Nenhum pedido de filme em aberto' },
-          { label: '📺 Séries — Pedidos Abertos', items: open.series, href: '/dashboard/requests?type=TV&status=ABERTO', empty: 'Nenhum pedido de série em aberto' },
-        ].map(({ label, items, href, empty }) => (
-          <div key={label} className="flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-2 flex-shrink-0">
-              <h2 className="text-xs font-semibold flex items-center gap-1.5">
-                {label}
-                {items.length > 0 && <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full">{items.length}</span>}
-              </h2>
-              <Link href={href} className="text-xs text-primary hover:underline">Ver todos →</Link>
-            </div>
-            {items.length === 0 ? (
-              <div className="bg-card border border-border rounded-lg p-4 text-center text-muted-foreground text-xs flex-1 flex items-center justify-center">{empty}</div>
-            ) : (
-              <div className="grid grid-cols-5 gap-1.5">
-                {items.map((r) => <RequestCard key={r.id} r={r} href={href} />)}
-              </div>
-            )}
+      {/* Filmes */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            🎬 Filmes — Pedidos Abertos
+            {open.movies.length > 0 && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">{open.movies.length}</span>}
+          </h2>
+          <Link href="/dashboard/requests?type=MOVIE&status=ABERTO" className="text-xs text-primary hover:underline">Ver todos →</Link>
+        </div>
+        {open.movies.length === 0 ? (
+          <div className="bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">Nenhum pedido de filme em aberto</div>
+        ) : (
+          <div className="grid grid-cols-5 gap-3">
+            {open.movies.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=MOVIE&status=ABERTO" />)}
           </div>
-        ))}
+        )}
+      </div>
+
+      {/* Séries */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold flex items-center gap-2">
+            📺 Séries — Pedidos Abertos
+            {open.series.length > 0 && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">{open.series.length}</span>}
+          </h2>
+          <Link href="/dashboard/requests?type=TV&status=ABERTO" className="text-xs text-primary hover:underline">Ver todos →</Link>
+        </div>
+        {open.series.length === 0 ? (
+          <div className="bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">Nenhum pedido de série em aberto</div>
+        ) : (
+          <div className="grid grid-cols-5 gap-3">
+            {open.series.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=TV&status=ABERTO" />)}
+          </div>
+        )}
       </div>
     </div>
   )
