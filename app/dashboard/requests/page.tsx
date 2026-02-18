@@ -197,7 +197,7 @@ export default function RequestsPage() {
   const handleSubmit = async () => {
     if (!form.requestedTitle.trim()) { toast.error('Título obrigatório'); return }
     setFormLoading(true)
-    const res = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestedTitle: form.requestedTitle, type: form.type, notes: form.notes || null, preferredSystem: form.preferredSystem || null, tmdbId: form.tmdbId || null }) })
+    const res = await fetch('/api/requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requestedTitle: form.requestedTitle, type: form.type, notes: form.notes || null, preferredSystem: form.preferredSystem || null, tmdbId: form.tmdbId || null, posterUrl: form.posterUrl || null }) })
     setFormLoading(false)
     if (res.ok) { toast.success('Pedido criado!'); resetForm(); fetch_() }
     else toast.error('Erro ao criar pedido')
