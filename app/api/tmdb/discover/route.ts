@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) throw new Error("TMDB erro " + res.status);
     const data = await res.json();
-    const results = (data.results || []).slice(0, 8).map((item) => ({
+    const results = (data.results || []).slice(0, 8).map((item: any) => ({
       tmdbId: item.id,
       title: item.title || item.name,
       posterPath: item.poster_path ? "https://image.tmdb.org/t/p/w300" + item.poster_path : null,
