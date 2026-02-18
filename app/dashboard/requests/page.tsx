@@ -32,43 +32,36 @@ interface TMDBResult {
 
 const STATUS_OPTIONS = ['ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']
 
-// Determines if audio is complete (both dub and leg)
-function isAudioComplete(audio: string | null): boolean {
-  if (!audio) return false
-  return audio.includes('DUBLADO_LEGENDADO') || audio.includes('Dublado + Legendado') || audio === 'TODAS_DUBLADO_LEGENDADO'
-}
-
 function getAudioLabel(audio: string | null): { label: string; complete: boolean } {
   if (!audio) return { label: '—', complete: false }
   const map: Record<string, string> = {
-    DUBLADO: '🎙️ Dublado',
-    LEGENDADO: '📝 Legendado',
-    DUBLADO_LEGENDADO: '✅ Dub + Leg',
-    TODAS_DUBLADO: '🎙️ Todas — Dub',
-    TODAS_LEGENDADO: '📝 Todas — Leg',
-    TODAS_DUBLADO_LEGENDADO: '✅ Todas — Dub+Leg',
+    DUBLADO: 'Dub',
+    LEGENDADO: 'Leg',
+    DUBLADO_LEGENDADO: 'Dub/Leg',
+    TODAS_DUBLADO: 'Todas-Dub',
+    TODAS_LEGENDADO: 'Todas-Leg',
+    TODAS_DUBLADO_LEGENDADO: 'Todas-Dub/Leg',
   }
   const label = map[audio] || audio
-  return { label, complete: isAudioComplete(audio) }
+  const complete = audio === 'DUBLADO_LEGENDADO' || audio === 'TODAS_DUBLADO_LEGENDADO' || audio.includes('Dublado + Legendado')
+  return { label, complete }
 }
 
 function AudioMovieModal({ current, onConfirm, onCancel }: { current?: string | null; onConfirm: (audio: string) => void; onCancel: () => void }) {
-  const isEdit = !!current
-  const options = [
-    { value: 'DUBLADO', label: '🎙️ Dublado' },
-    { value: 'LEGENDADO', label: '📝 Legendado' },
-    { value: 'DUBLADO_LEGENDADO', label: '✅ Dublado + Legendado' },
-  ]
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
       <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold mb-2">{isEdit ? 'Atualizar Áudio' : 'Concluir Pedido'}</h3>
+        <h3 className="text-lg font-bold mb-2">{current ? 'Atualizar Áudio' : 'Concluir Pedido'}</h3>
         <p className="text-sm text-muted-foreground mb-6">Como o conteúdo foi disponibilizado?</p>
         <div className="grid grid-cols-1 gap-3">
-          {options.map((opt) => (
+          {[
+            { value: 'DUBLADO', label: '🎙️ Dublado (Dub)' },
+            { value: 'LEGENDADO', label: '📝 Legendado (Leg)' },
+            { value: 'DUBLADO_LEGENDADO', label: '✅ Dublado + Legendado (Dub/Leg)' },
+          ].map((opt) => (
             <button key={opt.value} onClick={() => onConfirm(opt.value)}
               className={"w-full py-3 px-4 rounded-xl border transition-all text-sm font-medium text-left " + (current === opt.value ? 'bg-primary/20 border-primary' : 'border-border hover:bg-primary hover:text-primary-foreground hover:border-primary')}>
-              {opt.label} {current === opt.value ? '(atual)' : ''}
+              {opt.label} {current === opt.value ? '← atual' : ''}
             </button>
           ))}
         </div>
@@ -82,12 +75,11 @@ function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | nul
   const [selected, setSelected] = useState('')
   const [customSeason, setCustomSeason] = useState('')
   const [customAudio, setCustomAudio] = useState('')
-  const isEdit = !!current
 
   const options = [
-    { value: 'TODAS_DUBLADO', label: '🎙️ Todas as temporadas — Dublado' },
-    { value: 'TODAS_LEGENDADO', label: '📝 Todas as temporadas — Legendado' },
-    { value: 'TODAS_DUBLADO_LEGENDADO', label: '✅ Todas as temporadas — Dublado + Legendado' },
+    { value: 'TODAS_DUBLADO', label: '🎙️ Todas as temporadas — Dub' },
+    { value: 'TODAS_LEGENDADO', label: '📝 Todas as temporadas — Leg' },
+    { value: 'TODAS_DUBLADO_LEGENDADO', label: '✅ Todas as temporadas — Dub/Leg' },
     { value: 'CUSTOM', label: '🎛️ Temporada(s) específica(s)...' },
   ]
 
@@ -103,7 +95,7 @@ function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | nul
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
       <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm">
-        <h3 className="text-lg font-bold mb-2">{isEdit ? 'Atualizar Áudio — Série' : 'Concluir Pedido — Série'}</h3>
+        <h3 className="text-lg font-bold mb-2">{current ? 'Atualizar Áudio — Série' : 'Concluir Pedido — Série'}</h3>
         <p className="text-sm text-muted-foreground mb-4">Como o conteúdo foi disponibilizado?</p>
         <div className="grid grid-cols-1 gap-2">
           {options.map((opt) => (
@@ -117,7 +109,7 @@ function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | nul
           <div className="mt-4 space-y-3">
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Temporada(s)</label>
-              <input value={customSeason} onChange={(e) => setCustomSeason(e.target.value)} placeholder="Ex: 1, 2 e 3 ou Temporada 1"
+              <input value={customSeason} onChange={(e) => setCustomSeason(e.target.value)} placeholder="Ex: 1, 2 e 3"
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
             </div>
             <div>
@@ -125,9 +117,9 @@ function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | nul
               <select value={customAudio} onChange={(e) => setCustomAudio(e.target.value)}
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
                 <option value="">Selecione...</option>
-                <option value="Dublado">Dublado</option>
-                <option value="Legendado">Legendado</option>
-                <option value="Dublado + Legendado">Dublado + Legendado</option>
+                <option value="Dub">Dub</option>
+                <option value="Leg">Leg</option>
+                <option value="Dub/Leg">Dub/Leg</option>
               </select>
             </div>
           </div>
@@ -156,7 +148,7 @@ export default function RequestsPage() {
   const [filterStatus, setFilterStatus] = useState('')
   const [filterType, setFilterType] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [audioModal, setAudioModal] = useState<{ id: string; type: string; current?: string | null; newStatus?: string } | null>(null)
+  const [audioModal, setAudioModal] = useState<{ id: string; type: string; current?: string | null; newStatus: string } | null>(null)
   const [form, setForm] = useState({ requestedTitle: '', type: 'MOVIE', notes: '', preferredSystem: '', tmdbId: null as number | null, posterUrl: null as string | null, overview: null as string | null, releaseYear: null as number | null })
   const [formLoading, setFormLoading] = useState(false)
   const [tmdbQuery, setTmdbQuery] = useState('')
@@ -216,23 +208,27 @@ export default function RequestsPage() {
       setAudioModal({ id, type, current: currentAudio, newStatus: 'CONCLUIDO' })
       return
     }
-    await applyStatusChange(id, status, null)
+    await applyUpdate(id, status, null)
   }
 
-  const applyStatusChange = async (id: string, status: string, audioType: string | null) => {
-    // If audio is complete, keep CONCLUIDO; otherwise mark as CONCLUIDO but partial
-    const finalStatus = status === 'CONCLUIDO' ? 'CONCLUIDO' : status
-    const res = await fetch('/api/requests/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: finalStatus, audioType }) })
+  const applyUpdate = async (id: string, status: string, audioType: string | null) => {
+    const res = await fetch('/api/requests/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, audioType })
+    })
     if (res.ok) {
-      const complete = isAudioComplete(audioType)
-      toast.success(complete ? '✅ Pedido concluído com Dub + Leg!' : '🎙️ Pedido concluído (parcial) — você pode editar o áudio depois')
+      const { complete } = getAudioLabel(audioType)
+      if (status === 'CONCLUIDO') {
+        toast.success(complete ? '✅ Concluído — Dub/Leg!' : '🎙️ Concluído — você pode atualizar o áudio depois')
+      } else {
+        toast.success('Status atualizado')
+      }
       fetch_()
-    } else toast.error('Erro ao atualizar')
+    } else {
+      toast.error('Erro ao atualizar')
+    }
     setAudioModal(null)
-  }
-
-  const handleEditAudio = (r: Request) => {
-    setAudioModal({ id: r.id, type: r.type, current: r.audioType, newStatus: r.status })
   }
 
   const handleDelete = async (id: string) => {
@@ -253,14 +249,14 @@ export default function RequestsPage() {
       {audioModal && audioModal.type === 'MOVIE' && (
         <AudioMovieModal
           current={audioModal.current}
-          onConfirm={(a) => applyStatusChange(audioModal.id, audioModal.newStatus || 'CONCLUIDO', a)}
+          onConfirm={(a) => applyUpdate(audioModal.id, audioModal.newStatus, a)}
           onCancel={() => setAudioModal(null)}
         />
       )}
       {audioModal && audioModal.type === 'TV' && (
         <AudioTVModal
           current={audioModal.current}
-          onConfirm={(a) => applyStatusChange(audioModal.id, audioModal.newStatus || 'CONCLUIDO', a)}
+          onConfirm={(a) => applyUpdate(audioModal.id, audioModal.newStatus, a)}
           onCancel={() => setAudioModal(null)}
         />
       )}
@@ -327,12 +323,14 @@ export default function RequestsPage() {
                   </td>
                   <td className="py-3 px-4">
                     {r.status === 'CONCLUIDO' ? (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <span className={"text-xs px-2 py-1 rounded-lg font-medium " + (audio.complete ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400')}>
                           {audio.label}
                         </span>
-                        {isAdmin && !audio.complete && (
-                          <button onClick={() => handleEditAudio(r)} title="Atualizar áudio"
+                        {isAdmin && (
+                          <button
+                            onClick={() => setAudioModal({ id: r.id, type: r.type, current: r.audioType, newStatus: 'CONCLUIDO' })}
+                            title="Atualizar áudio"
                             className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
                             <Pencil className="w-3 h-3" />
                           </button>
