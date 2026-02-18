@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
-import { RequestCreateSchema } from '@/lib/validators'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -42,11 +41,20 @@ export async function POST(req: NextRequest) {
   if (error) return error
 
   const body = await req.json()
-  const parsed = RequestCreateSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl } = body
+
+  if (!requestedTitle) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
 
   const request = await prisma.request.create({
-    data: { ...parsed.data, createdById: session!.user.id },
+    data: {
+      requestedTitle,
+      type: type || 'MOVIE',
+      notes: notes || null,
+      preferredSystem: preferredSystem || null,
+      tmdbId: tmdbId || null,
+      posterUrl: posterUrl || null,
+      createdById: session!.user.id,
+    },
   })
   return NextResponse.json(request, { status: 201 })
 }
