@@ -4,21 +4,21 @@ import { requireAuth } from '@/lib/rbac'
 import { RequestCreateSchema } from '@/lib/validators'
 
 export async function GET(req: NextRequest) {
-  const { error, session } = await requireAuth()
+  const { error } = await requireAuth()
   if (error) return error
 
   const sp = req.nextUrl.searchParams
   const search = sp.get('search') || ''
   const status = sp.get('status') || ''
+  const type = sp.get('type') || ''
   const page = Math.max(1, parseInt(sp.get('page') || '1'))
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
   const where: any = {}
-  if (search) {
-    where.requestedTitle = { contains: search, mode: 'insensitive' }
-  }
+  if (search) where.requestedTitle = { contains: search, mode: 'insensitive' }
   if (status) where.status = status
+  if (type) where.type = type
 
   const [total, requests] = await Promise.all([
     prisma.request.count({ where }),
