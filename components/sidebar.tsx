@@ -7,11 +7,17 @@ import {
   Film, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight,
+} from 'lucide-react'
 
+const navItems = [
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/titles/new', icon: PlusCircle, label: 'Cadastrar Título' },
   { href: '/dashboard/titles', icon: List, label: 'Conteúdo' },
+  { href: '/dashboard/filmes', icon: Film, label: 'Filmes' },
+  { href: '/dashboard/series', icon: Tv, label: 'Séries' },
   { href: '/dashboard/requests', icon: ClipboardList, label: 'Pedidos' },
 ]
 
