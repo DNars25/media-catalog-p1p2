@@ -32,24 +32,23 @@ async function getOpenRequests() {
   return { movies, series }
 }
 
-function RequestCard({ r, href, color }: { r: any; href: string; color: string }) {
+function RequestCard({ r, href, barColor }: { r: any; href: string; barColor: string }) {
   const date = new Date(r.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
   return (
-    <Link href={href} className="group block">
-      <div className="relative rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-all hover:scale-[1.03]" style={{ aspectRatio: '2/3' }}>
+    <Link href={href} className="group block w-[150px] flex-shrink-0">
+      <div className="relative rounded-lg overflow-hidden border border-border/40 hover:border-primary/60 transition-all hover:scale-[1.03] bg-card" style={{ width: '150px', height: '225px' }}>
         {r.posterUrl ? (
           <img src={r.posterUrl} alt={r.requestedTitle} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex flex-col items-center justify-center p-2">
+          <div className="w-full h-full bg-zinc-800 flex flex-col items-center justify-center p-2">
             <Film className="w-6 h-6 text-zinc-600 mb-1" />
             <p className="text-[10px] text-center text-zinc-500 line-clamp-3 leading-tight">{r.requestedTitle}</p>
           </div>
         )}
-        {/* colored bar at bottom like TMDB */}
-        <div className={"absolute bottom-0 left-0 right-0 h-1 " + color} />
+        <div className={"absolute bottom-0 left-0 right-0 h-1 " + barColor} />
       </div>
-      <div className="mt-1.5 px-0.5">
-        <p className="text-xs font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">{r.requestedTitle}</p>
+      <div className="mt-2 w-[150px]">
+        <p className="text-xs font-semibold text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors">{r.requestedTitle}</p>
         <p className="text-[10px] text-muted-foreground mt-0.5">{date}</p>
       </div>
     </Link>
@@ -102,8 +101,8 @@ export default async function DashboardPage() {
         {open.movies.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">Nenhum pedido de filme em aberto</div>
         ) : (
-          <div className="grid grid-cols-5 gap-4">
-            {open.movies.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=MOVIE&status=ABERTO" color="bg-orange-500" />)}
+          <div className="flex gap-4">
+            {open.movies.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=MOVIE&status=ABERTO" barColor="bg-orange-500" />)}
           </div>
         )}
       </div>
@@ -120,8 +119,8 @@ export default async function DashboardPage() {
         {open.series.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">Nenhum pedido de série em aberto</div>
         ) : (
-          <div className="grid grid-cols-5 gap-4">
-            {open.series.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=TV&status=ABERTO" color="bg-green-500" />)}
+          <div className="flex gap-4">
+            {open.series.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=TV&status=ABERTO" barColor="bg-green-500" />)}
           </div>
         )}
       </div>
