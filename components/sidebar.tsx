@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
-  Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight,
+  Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/dashboard/filmes', icon: Film, label: 'Filmes' },
   { href: '/dashboard/series', icon: Tv, label: 'Séries' },
   { href: '/dashboard/requests', icon: ClipboardList, label: 'Pedidos' },
+  { href: '/dashboard/atualizacoes', icon: RefreshCw, label: 'Atualizacoes' },
 ]
 
 const adminItems = [

@@ -18,6 +18,9 @@ export async function GET(req: NextRequest) {
   if (search) where.requestedTitle = { contains: search, mode: 'insensitive' }
   if (status) where.status = status
   if (type) where.type = type
+  const isUpdate = sp.get("isUpdate")
+  if (isUpdate === "true") where.isUpdate = true
+  if (isUpdate === "false") where.isUpdate = false
 
   const [total, requests] = await Promise.all([
     prisma.request.count({ where }),
