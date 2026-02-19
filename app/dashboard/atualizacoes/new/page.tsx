@@ -20,7 +20,7 @@ export default function NovaAtualizacaoPage() {
     setSearching(true);
     fetch("/api/tmdb/search?query=" + encodeURIComponent(value) + "&type=tv")
       .then((r) => r.json())
-      .then((d) => setResults(d.results || []))
+      .then((d) => setResults(Array.isArray(d) ? d : (d.results || [])))
       .catch(() => toast.error("Erro ao buscar"))
       .finally(() => setSearching(false));
   }
