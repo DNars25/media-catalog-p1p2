@@ -320,13 +320,16 @@ export default function RequestsPage() {
                   </td>
                   <td className="py-3 px-4"><Badge status={r.type as any} /></td>
                   <td className="py-3 px-4">
-                    {isAdmin ? (
-                      <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value, r.type, r.audioType)}
-                        className="bg-muted border border-border rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50">
-                        {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                      </select>
-                    ) : <Badge status={r.status as any} />}
-                  </td>
+                    <div className="flex gap-1 flex-wrap">
+                      {["ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"].map((s) => {
+                        const colors: Record<string,string> = { ABERTO: "bg-yellow-600", EM_PROGRESSO: "bg-blue-600", CONCLUIDO: "bg-green-600", REJEITADO: "bg-red-600" };
+                        const labels: Record<string,string> = { ABERTO: "Aberto", EM_PROGRESSO: "Em Progresso", CONCLUIDO: "Concluido", REJEITADO: "Rejeitado" };
+                        const canChange = isAdmin || r.createdBy.name === session?.user?.name;
+                        return canChange ? (
+                          <button key={s} onClick={() => handleStatusChange(r.id, s, r.type, r.audioType)} disabled={r.status === s} className={"px-2 py-1 rounded-full text-xs font-medium transition disabled:opacity-40 " + (r.status === s ? (colors[s] + " text-white") : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}>{labels[s]}</button>
+                        ) : <Badge key={s} status={r.status as any} />;
+                      })}
+                    </div>
                   <td className="py-3 px-4">
                     {r.status === 'CONCLUIDO' ? (
                       <div className="flex items-center gap-2">
