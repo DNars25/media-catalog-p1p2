@@ -5,8 +5,8 @@ import Link from 'next/link'
 async function getStats() {
   const [totalTitles, openRequests, awaitingUpdate, movies, tvShows] = await Promise.all([
     prisma.title.count(),
-    prisma.request.count({ where: { status: 'ABERTO' } }),
-    prisma.title.count({ where: { type: 'TV', tvStatus: 'EM_ANDAMENTO' } }),
+    prisma.request.count({ where: { status: 'ABERTO', isUpdate: false } }),
+    prisma.request.count({ where: { isUpdate: true, status: 'ABERTO' } }),
     prisma.title.count({ where: { type: 'MOVIE' } }),
     prisma.title.count({ where: { type: 'TV' } }),
   ])
