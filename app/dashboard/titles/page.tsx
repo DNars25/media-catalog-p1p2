@@ -17,6 +17,7 @@ interface Title {
   posterUrl: string | null
   hasP1: boolean
   hasP2: boolean
+  audioType: string | null
   internalStatus: string
   tvStatus: string | null
   overview: string | null
@@ -54,6 +55,7 @@ export default function TitlesPage() {
       ...(filterType && { type: filterType }),
       ...(filterP1 && { p1: filterP1 }),
       ...(filterP2 && { p2: filterP2 }),
+      ...(filterAudio && { audioType: filterAudio }),
       ...(filterStatus && { internalStatus: filterStatus }),
     })
     const res = await fetch(`/api/titles?${params}`)
@@ -112,6 +114,15 @@ export default function TitlesPage() {
         <button onClick={() => { setFilterP2(filterP2 === "true" ? "" : "true"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterP2 === "true" ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
           Serv P2
         </button>
+        <button onClick={() => { setFilterAudio(filterAudio === "DUBLADO" ? "" : "DUBLADO"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterAudio === "DUBLADO" ? "bg-purple-600 border-purple-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
+          Dublado
+        </button>
+        <button onClick={() => { setFilterAudio(filterAudio === "LEGENDADO" ? "" : "LEGENDADO"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterAudio === "LEGENDADO" ? "bg-purple-600 border-purple-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
+          Legendado
+        </button>
+        <button onClick={() => { setFilterAudio(filterAudio === "DUBLADO_LEGENDADO" ? "" : "DUBLADO_LEGENDADO"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterAudio === "DUBLADO_LEGENDADO" ? "bg-purple-600 border-purple-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
+          Dub/Leg
+        </button>
       </div>
 
       {/* Table */}
@@ -124,6 +135,7 @@ export default function TitlesPage() {
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ano</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Áudio</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P1</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P2</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
@@ -164,6 +176,7 @@ export default function TitlesPage() {
                     </td>
                     <td className="py-3 px-4"><Badge status={t.type as any} /></td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{t.releaseYear || '—'}</td>
+                    <td className="py-3 px-4"><span className="text-xs text-zinc-400">{t.audioType === "DUBLADO_LEGENDADO" ? "Dub/Leg" : t.audioType === "LEGENDADO" ? "Leg" : t.audioType === "DUBLADO" ? "Dub" : "—"}</span></td>
                     <td className="py-3 px-4"><PBadge type="P1" active={t.hasP1} /></td>
                     <td className="py-3 px-4"><PBadge type="P2" active={t.hasP2} /></td>
                     <td className="py-3 px-4"><Badge status={t.internalStatus as any} /></td>

@@ -30,6 +30,8 @@ export async function GET(req: NextRequest) {
   if (p1 === 'false') where.hasP1 = false
   if (p2 === 'true') where.hasP2 = true
   if (p2 === 'false') where.hasP2 = false
+  const audioType = sp.get('audioType')
+  if (audioType) where.audioType = audioType
   if (internalStatus) where.internalStatus = internalStatus
   if (tvStatus) where.tvStatus = tvStatus
 

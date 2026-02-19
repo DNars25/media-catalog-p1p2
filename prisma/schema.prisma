@@ -67,6 +67,7 @@ model Title {
   tvEpisodes     Int?
   tvStatus       TvStatus?
   internalStatus InternalStatus @default(AGUARDANDO_DOWNLOAD)
+  audioType      String?
   hasP1          Boolean        @default(false)
   hasP2          Boolean        @default(false)
   createdById    String
