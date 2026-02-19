@@ -308,9 +308,14 @@ export default function RequestsPage() {
               return (
                 <tr key={r.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                   <td className="py-3 px-4">
-                    <p className="font-medium text-sm">{r.requestedTitle}</p>
+                      <div className="flex items-center gap-3">
+                        {r.posterUrl ? (<img src={r.posterUrl} alt={r.requestedTitle} className="w-10 h-14 object-cover rounded-lg flex-shrink-0" />) : (<div className="w-10 h-14 bg-muted rounded-lg flex-shrink-0" />)}
+                        <div>
+                          <p className="font-medium text-sm">{r.requestedTitle}</p>
                     {r.linkedTitle && <p className="text-xs text-primary mt-0.5">→ {r.linkedTitle.title}</p>}
                     {r.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.notes}</p>}
+                        </div>
+                      </div>
                   </td>
                   <td className="py-3 px-4"><Badge status={r.type as any} /></td>
                   <td className="py-3 px-4">
