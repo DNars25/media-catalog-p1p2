@@ -330,6 +330,7 @@ export default function RequestsPage() {
                         ) : <Badge key={s} status={r.status as any} />;
                       })}
                     </div>
+                  </td>
                   <td className="py-3 px-4">
                     {r.status === 'CONCLUIDO' ? (
                       <div className="flex items-center gap-2">
