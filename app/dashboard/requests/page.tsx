@@ -181,7 +181,7 @@ export default function RequestsPage() {
   const fetch_ = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ page: page.toString(), limit: '20', ...(search && { search }), ...(filterStatus && { status: filterStatus }), ...(filterType && { type: filterType }) })
-    const res = await fetch('/api/requests?' + params)
+    const res = await fetch('/api/requests?' + params + '&isUpdate=false')
     const data = await res.json()
     setRequests(data.requests || [])
     setTotal(data.total || 0)
