@@ -16,6 +16,7 @@ interface Request {
   preferredSystem: string | null
   notes: string | null
   audioType: string | null
+  posterUrl: string | null
   createdAt: string
   createdBy: { name: string }
   linkedTitle: { id: string; title: string } | null
