@@ -327,6 +327,9 @@ export default function RequestsPage() {
                         {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
                       </select>
                     ) : <Badge status={r.status as any} />}
+                  </td>
+                  <td className="py-3 px-4">
+                    {r.status === 'CONCLUIDO' ? (
                       <div className="flex items-center gap-2">
                         <span className={"text-xs px-2 py-1 rounded-lg font-medium " + (audio.complete ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400')}>
                           {audio.label}
