@@ -43,7 +43,7 @@ function CadastroModal({
       }
 
       // Cadastra no sistema
-      const res = await fetch("/api/titles", {
+      const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
