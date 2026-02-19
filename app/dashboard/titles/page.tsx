@@ -83,7 +83,7 @@ export default function TitlesPage() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Conteúdo</h1>
+        <h1 className="text-3xl font-bold">Biblioteca</h1>
         <p className="text-muted-foreground mt-1">{total} títulos encontrados</p>
       </div>
 
@@ -106,36 +106,12 @@ export default function TitlesPage() {
           <option value="TV">Séries</option>
         </select>
 
-        <select
-          value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setPage(1) }}
-          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <option value="">Todos os status</option>
-          <option value="AGUARDANDO_DOWNLOAD">Aguardando</option>
-          <option value="DISPONIVEL">Disponível</option>
-          <option value="INDISPONIVEL">Indisponível</option>
-        </select>
-
-        <select
-          value={filterP1}
-          onChange={(e) => { setFilterP1(e.target.value); setPage(1) }}
-          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <option value="">P1: Todos</option>
-          <option value="true">P1: Sim</option>
-          <option value="false">P1: Não</option>
-        </select>
-
-        <select
-          value={filterP2}
-          onChange={(e) => { setFilterP2(e.target.value); setPage(1) }}
-          className="bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <option value="">P2: Todos</option>
-          <option value="true">P2: Sim</option>
-          <option value="false">P2: Não</option>
-        </select>
+        <button onClick={() => { setFilterP1(filterP1 === "true" ? "" : "true"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterP1 === "true" ? "bg-orange-600 border-orange-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
+          Serv P1
+        </button>
+        <button onClick={() => { setFilterP2(filterP2 === "true" ? "" : "true"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterP2 === "true" ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
+          Serv P2
+        </button>
       </div>
 
       {/* Table */}

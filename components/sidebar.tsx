@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/titles/new', icon: PlusCircle, label: 'Cadastrar Título' },
-  { href: '/dashboard/titles', icon: List, label: 'Conteúdo' },
+  { href: '/dashboard/titles', icon: List, label: 'Biblioteca' },
   { href: '/dashboard/filmes', icon: Film, label: 'Filmes' },
   { href: '/dashboard/series', icon: Tv, label: 'Séries' },
   { href: '/dashboard/requests', icon: ClipboardList, label: 'Pedidos' },
