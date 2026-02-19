@@ -42,6 +42,7 @@ export default function TitlesPage() {
   const [filterType, setFilterType] = useState('')
   const [filterP1, setFilterP1] = useState('')
   const [filterP2, setFilterP2] = useState('')
+  const [filterAudio, setFilterAudio] = useState("")
   const [filterStatus, setFilterStatus] = useState('')
 
   const [editTitle, setEditTitle] = useState<Title | null>(null)
