@@ -78,6 +78,9 @@ export async function getTMDBDetails(type: 'movie' | 'tv', tmdbId: number) {
     result.tvSeasons = data.number_of_seasons ?? null
     result.tvEpisodes = data.number_of_episodes ?? null
     result.tvStatus = mapTvStatus(data.status || '')
+    result.number_of_seasons = data.number_of_seasons ?? null
+    result.number_of_episodes = data.number_of_episodes ?? null
+    result.seasons = (data.seasons || []).map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count, name: s.name }))
   }
 
   setCache(key, result)

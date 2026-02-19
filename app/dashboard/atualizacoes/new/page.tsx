@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 interface TmdbResult { tmdbId: number; type: string; title: string; overview: string; posterUrl: string | null; releaseYear: number | null; }
-interface TmdbDetails { number_of_seasons: number; number_of_episodes: number; seasons: { season_number: number; episode_count: number; name: string }[]; }
+interface TmdbDetails { tvSeasons: number | null; tvEpisodes: number | null; number_of_seasons?: number; number_of_episodes?: number; seasons?: { season_number: number; episode_count: number; name: string }[]; }
 export default function NovaAtualizacaoPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -97,10 +97,10 @@ export default function NovaAtualizacaoPage() {
               <p className="text-white font-bold">{selected.title}</p>
               {loadingDetails ? (<p className="text-zinc-500 text-xs mt-2 animate-pulse">Carregando detalhes...</p>) : details ? (
                 <div className="mt-2 space-y-1">
-                  <p className="text-zinc-400 text-xs">Total de temporadas: <span className="text-white font-semibold">{details.number_of_seasons}</span></p>
-                  <p className="text-zinc-400 text-xs">Total de episodios: <span className="text-white font-semibold">{details.number_of_episodes}</span></p>
+                  <p className="text-zinc-400 text-xs">Total de temporadas: <span className="text-white font-semibold">{details.tvSeasons || details.number_of_seasons}</span></p>
+                  <p className="text-zinc-400 text-xs">Total de episodios: <span className="text-white font-semibold">{details.tvEpisodes || details.number_of_episodes}</span></p>
                   <div className="mt-2 space-y-0.5">
-                    {details.seasons.filter((s) => s.season_number > 0).map((s) => (
+                    {(details.seasons || []).filter((s) => s.season_number > 0).map((s) => (
                       <p key={s.season_number} className="text-zinc-500 text-xs">• {s.name}: <span className="text-zinc-300">{s.episode_count} episodios</span></p>
                     ))}
                   </div>
@@ -115,7 +115,7 @@ export default function NovaAtualizacaoPage() {
               <label className="text-zinc-300 text-sm font-medium block mb-2">Temporada que precisa ser atualizada</label>
               <select value={form.seasonNumber} onChange={(e) => setForm({ ...form, seasonNumber: e.target.value })} className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-4 py-2.5 text-zinc-200 text-sm focus:outline-none focus:border-zinc-400">
                 <option value="">Selecione a temporada...</option>
-                {details ? details.seasons.filter((s) => s.season_number > 0).map((s) => (
+                {details ? (details.seasons || []).filter((s) => s.season_number > 0).map((s) => (
                   <option key={s.season_number} value={s.season_number}>{s.name} ({s.episode_count} episodios)</option>
                 )) : null}
               </select>
