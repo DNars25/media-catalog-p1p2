@@ -47,17 +47,7 @@ function CadastroModal({
       const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tmdbId: item.tmdbId,
-          title: item.title,
-          type: "MOVIE",
-          posterPath: item.posterPath,
-          overview: item.overview,
-          releaseDate: item.releaseDate,
-          availableP1: p1,
-          availableP2: p2,
-          ...details,
-        }),
+        body: JSON.stringify({ requestedTitle: item.title, type: "MOVIE", tmdbId: item.tmdbId, posterUrl: item.posterPath }),
       });
 
       const data = await res.json();
