@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-interface Update { id: string; requestedTitle: string; type: string; seasonNumber: number | null; audioType: string | null; notes: string | null; status: string; posterUrl: string | null; createdAt: string; createdBy: { name: string; email: string }; }
+interface Update { id: string; requestedTitle: string; type: string; seasonNumber: number | null; audioType: string | null; notes: string | null; status: string; posterUrl: string | null; createdAt: string; createdBy: { name: string; email: string }; createdById?: string; }
 const statusColor: Record<string, string> = { ABERTO: "bg-yellow-600", EM_PROGRESSO: "bg-blue-600", CONCLUIDO: "bg-green-600", REJEITADO: "bg-red-600" };
 const statusLabel: Record<string, string> = { ABERTO: "Aberto", EM_PROGRESSO: "Em Progresso", CONCLUIDO: "Concluido", REJEITADO: "Rejeitado" };
-function DetalheModal({ update, onClose, onStatusChange }: { update: Update; onClose: () => void; onStatusChange: (id: string, status: string) => void; }) {
+function DetalheModal({ update, onClose, onStatusChange, onDelete, isAdmin, userId }: { update: Update; onClose: () => void; onStatusChange: (id: string, status: string) => void; onDelete: (id: string) => void; isAdmin: boolean; userId: string; }) {
   const [updating, setUpdating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const canEdit = isAdmin || update.createdById === userId;
   async function handleStatus(status: string) {
     setUpdating(true);
     await onStatusChange(update.id, status);
@@ -41,31 +44,44 @@ function DetalheModal({ update, onClose, onStatusChange }: { update: Update; onC
               <p className="text-zinc-200 text-sm whitespace-pre-wrap">{update.notes}</p>
             </div>
           )}
-          <div>
-            <p className="text-zinc-400 text-xs font-medium mb-2">Alterar Status</p>
-            <div className="flex gap-2 flex-wrap">
-              {["ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"].map((s) => (
-                <button key={s} onClick={() => handleStatus(s)} disabled={updating || update.status === s} className={"px-3 py-1.5 rounded-full text-xs font-medium transition disabled:opacity-40 " + (update.status === s ? (statusColor[s] + " text-white") : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}>
-                  {statusLabel[s]}
-                </button>
-              ))}
+          {canEdit && (
+            <div>
+              <p className="text-zinc-400 text-xs font-medium mb-2">Alterar Status</p>
+              <div className="flex gap-2 flex-wrap">
+                {["ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"].map((s) => (
+                  <button key={s} onClick={() => handleStatus(s)} disabled={updating || update.status === s} className={"px-3 py-1.5 rounded-full text-xs font-medium transition disabled:opacity-40 " + (update.status === s ? (statusColor[s] + " text-white") : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}>
+                    {statusLabel[s]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
-        <div className="px-5 pb-5">
-          <button onClick={onClose} className="w-full px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition text-sm">Fechar</button>
+        <div className="px-5 pb-5 flex gap-3">
+          <button onClick={onClose} className="flex-1 px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition text-sm">Fechar</button>
+          {canEdit && !confirmDelete && (
+            <button onClick={() => setConfirmDelete(true)} className="px-4 py-2 rounded-lg bg-red-600/20 border border-red-600/40 text-red-400 hover:bg-red-600/30 transition text-sm">Excluir</button>
+          )}
+          {canEdit && confirmDelete && (
+            <div className="flex gap-2 flex-1">
+              <button onClick={() => setConfirmDelete(false)} className="flex-1 px-4 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition text-sm">Cancelar</button>
+              <button onClick={() => onDelete(update.id)} className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition text-sm">Confirmar</button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 export default function AtualizacoesPage() {
+  const { data: session } = useSession();
   const router = useRouter();
   const [updates, setUpdates] = useState<Update[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("");
   const [selected, setSelected] = useState<Update | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const isAdmin = session?.user?.role === "ADMIN";
+  const userId = session?.user?.id || "";
   const fetchUpdates = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams({ isUpdate: "true" });
@@ -78,22 +94,22 @@ export default function AtualizacoesPage() {
   }, [filtroStatus]);
   useEffect(() => { fetchUpdates(); }, [fetchUpdates]);
   async function handleStatusChange(id: string, status: string) {
-    setUpdatingId(id);
     try {
-      const res = await fetch("/api/requests/" + id, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch("/api/requests/" + id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
       if (!res.ok) throw new Error("Erro ao atualizar");
       toast.success("Status atualizado!");
       setSelected((prev) => prev ? { ...prev, status } : null);
       fetchUpdates();
-    } catch (err: any) {
-      toast.error(err.message || "Erro inesperado");
-    } finally {
-      setUpdatingId(null);
-    }
+    } catch (err: any) { toast.error(err.message || "Erro inesperado"); }
+  }
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch("/api/requests/" + id, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao excluir");
+      toast.success("Solicitacao excluida!");
+      setSelected(null);
+      fetchUpdates();
+    } catch (err: any) { toast.error(err.message || "Erro inesperado"); }
   }
   return (
     <div className="p-6">
@@ -135,7 +151,7 @@ export default function AtualizacoesPage() {
           ))}
         </div>
       )}
-      {selected && <DetalheModal update={selected} onClose={() => setSelected(null)} onStatusChange={handleStatusChange} />}
+      {selected && <DetalheModal update={selected} onClose={() => setSelected(null)} onStatusChange={handleStatusChange} onDelete={handleDelete} isAdmin={isAdmin} userId={userId} />}
     </div>
   );
 }
