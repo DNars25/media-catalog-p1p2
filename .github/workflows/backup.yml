@@ -1,0 +1,38 @@
+name: Backup Diario
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v3
+
+      - name: Instalar postgresql-client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Dump do banco de dados
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          pg_dump $DATABASE_URL --no-password -Fc -f backup.dump
+
+      - name: Clonar repositorio de backup
+        run: |
+          git clone https://${{ secrets.BACKUP_TOKEN }}@github.com/DNars25/Nars-Backup.git backup-repo
+
+      - name: Copiar arquivos para backup
+        run: |
+          DATE=2026-02-20
+          mkdir -p backup-repo/database backup-repo/code
+          cp backup.dump backup-repo/database/backup-.dump
+          cd backup-repo
+          git config user.email "backup@encodingsolutions.com"
+          git config user.name "Backup Bot"
+          git add -A
+          git commit -m "Backup " || echo "Nada para commitar"
+          git push
