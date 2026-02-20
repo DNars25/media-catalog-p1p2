@@ -48,8 +48,6 @@ export function Sidebar() {
       <div className="p-4 border-b border-border flex items-center justify-center">
         <img src="/nars.png" alt="Nars VHD" className="h-12 w-auto object-contain" />
       </div>
-        </div>
-      </div>
 
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
