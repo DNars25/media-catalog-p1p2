@@ -68,17 +68,34 @@ export default function SettingsPage() {
         <p className="text-xs text-muted-foreground mt-4">PNG, JPG ou WebP. Máximo 2MB.</p>
       </div>
       <div className="mt-6 bg-card border border-border rounded-xl p-6">
-        <h2 className="font-semibold mb-2">Sobre o sistema</h2>
-        <p className="text-sm text-muted-foreground">Media Catalog P1P2 — sistema para catalogar filmes e séries com controle de disponibilidade em servidores P1 e P2.</p>
-        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-          <div className="bg-muted rounded-lg p-3">
-            <p className="text-muted-foreground text-xs mb-1">Stack</p>
-            <p className="font-medium">Next.js 14 + Prisma + PostgreSQL</p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-xl">🎬</div>
+          <div>
+            <h2 className="font-semibold">Nars VHD</h2>
+            <p className="text-xs text-muted-foreground">Seu acervo digital, organizado.</p>
           </div>
-          <div className="bg-muted rounded-lg p-3">
-            <p className="text-muted-foreground text-xs mb-1">UI</p>
-            <p className="font-medium">Tailwind CSS + shadcn/ui</p>
+        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed">Plataforma pessoal para catalogar e gerenciar filmes e séries armazenados nos servidores P1 e P2. Tudo num só lugar — busca rápida, controle de disponibilidade e histórico de pedidos.</p>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="bg-muted rounded-lg p-3 text-center">
+            <p className="text-2xl mb-1">🎥</p>
+            <p className="text-xs font-medium">Filmes & Séries</p>
+            <p className="text-xs text-muted-foreground">+14.000 títulos</p>
           </div>
+          <div className="bg-muted rounded-lg p-3 text-center">
+            <p className="text-2xl mb-1">🖥️</p>
+            <p className="text-xs font-medium">Servidores</p>
+            <p className="text-xs text-muted-foreground">P1 & P2</p>
+          </div>
+          <div className="bg-muted rounded-lg p-3 text-center">
+            <p className="text-2xl mb-1">📋</p>
+            <p className="text-xs font-medium">Pedidos</p>
+            <p className="text-xs text-muted-foreground">Controle total</p>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">Desenvolvido por <span className="text-primary font-medium">DNars25</span></p>
+          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">v1.0</span>
         </div>
       </div>
     </div>
