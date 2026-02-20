@@ -4,7 +4,7 @@ const https = require('https');
 
 const M3U_FILE = path.join(__dirname, 'tv_channels_narsvod_plus.m3u');
 const DELAY_MS = 300;
-const MAX_TITLES = 50; // Mude para null para importar tudo
+const MAX_TITLES = null; // Mude para null para importar tudo
 
 const MOVIE_GROUPS = [
   'ACAO/AVENTURA','COMEDIA','FICCAO','TERROR/SUSPENSE','ROMANCE/DRAMA',
@@ -110,6 +110,7 @@ async function run() {
   console.log(existingIds.size + ' titulos ja no banco, adminId: ' + adminId);
 
   let inserted = 0, skipped = 0, errors = 0, updates = 0;
+  const ignored = [];
 
   // FILMES
   console.log('\nProcessando filmes...');
@@ -122,8 +123,8 @@ async function run() {
     try {
       await delay(DELAY_MS);
       const tmdb = await searchTMDB(movie.name, 'movie');
-      if (!tmdb) { skipped++; continue; }
-      if (existingIds.has(tmdb.id)) { skipped++; continue; }
+      if (!tmdb) { skipped++; ignored.push({ type: "MOVIE", name: movie.name, reason: "Nao encontrado no TMDB" }); continue; }
+      if (existingIds.has(tmdb.id)) { skipped++; ignored.push({ type: "MOVIE", name: movie.name, reason: "Ja existe no banco" }); continue; }
       const audio = (movie.hasDub && movie.hasLeg) ? 'DUBLADO_LEGENDADO' : movie.hasLeg ? 'LEGENDADO' : 'DUBLADO';
       const poster = tmdb.poster_path ? 'https://image.tmdb.org/t/p/w500' + tmdb.poster_path : null;
       const year = tmdb.release_date ? parseInt(tmdb.release_date.split('-')[0]) : null;
@@ -152,8 +153,8 @@ async function run() {
     try {
       await delay(DELAY_MS);
       const tmdb = await searchTMDB(name, 'tv');
-      if (!tmdb) { skippedS++; continue; }
-      if (existingIds.has(tmdb.id)) { skippedS++; continue; }
+      if (!tmdb) { skippedS++; ignored.push({ type: "TV", name: name, reason: "Nao encontrado no TMDB" }); continue; }
+      if (existingIds.has(tmdb.id)) { skippedS++; ignored.push({ type: "TV", name: name, reason: "Ja existe no banco" }); continue; }
       await delay(DELAY_MS);
       const details = await getTMDBDetails(tmdb.id, 'tv');
       const poster = tmdb.poster_path ? 'https://image.tmdb.org/t/p/w500' + tmdb.poster_path : null;
@@ -187,6 +188,8 @@ async function run() {
   console.log(updates + ' series com atualizacoes pendentes');
   await client.end();
   console.log('\nImportacao concluida! Total: ' + (inserted + insertedS) + ' titulos inseridos');
+  fs.writeFileSync(path.join(__dirname, 'import-ignored.json'), JSON.stringify(ignored, null, 2));
+  console.log(ignored.length + ' titulos ignorados salvos em import-ignored.json');
   fs.writeFileSync(path.join(__dirname, 'import-log.json'), JSON.stringify({ date: new Date().toISOString(), inserted, insertedS, skipped, skippedS, errors, errorsS, updates }, null, 2));
 }
 
