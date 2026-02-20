@@ -45,16 +45,9 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <Film className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <p className="font-bold text-sm leading-tight" style={{ fontFamily: 'Syne, sans-serif' }}>Nars VHD</p>
-            <p className="text-xs text-muted-foreground">Gerenciador</p>
-            <p className="text-xs text-muted-foreground">P1 & P2</p>
-          </div>
+      <div className="p-4 border-b border-border flex items-center justify-center">
+        <img src="/nars.png" alt="Nars VHD" className="h-12 w-auto object-contain" />
+      </div>
         </div>
       </div>
 
