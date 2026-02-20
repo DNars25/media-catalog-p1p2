@@ -81,7 +81,7 @@ export function Sidebar() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Admin</p>
             </div>
             {adminItems.map((item) => {
-              const active = pathname.startsWith(item.href)
+              const active = (pathname || "").startsWith(item.href)
               return (
                 <Link
                   key={item.href}
