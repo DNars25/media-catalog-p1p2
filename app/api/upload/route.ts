@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
   if (!allowed.includes(file.type)) return NextResponse.json({ error: 'Tipo de arquivo não permitido' }, { status: 400 });
 
-  const blob = await put(`avatars/${session.user.id}-${Date.now()}.png`, file, { access: 'public' });
+  const blob = await put(`avatars/${session.user.id}-${Date.now()}.png`, file, { access: 'private' });
 
   await prisma.user.update({
     where: { id: session.user.id },
