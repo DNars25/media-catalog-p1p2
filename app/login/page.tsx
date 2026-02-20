@@ -26,7 +26,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#050d18' }}>
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8" style={{}}>
-          <img src="/Login.png" alt="Encoding Solutions" className="h-40 w-auto object-contain" />
+          <img src="/Logo-transparente.png" alt="Encoding Solutions" className="h-40 w-auto object-contain" />
         </div>
         <div className="rounded-2xl p-8" style={{ backgroundColor: '#0f1923' }}>
           <h2 className="text-xl font-bold mb-6">Entrar</h2>
