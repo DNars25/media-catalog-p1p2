@@ -19,12 +19,13 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Dump do banco de dados
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          pg_dump $DATABASE_URL --no-password -Fc -f backup.dump
+          /usr/lib/postgresql/17/bin/pg_dump $DATABASE_URL --no-password -Fc -f backup.dump
 
       - name: Clonar repositorio de backup
         run: |
@@ -33,7 +34,7 @@ jobs:
       - name: Copiar arquivos para backup
         run: |
           DATE=2026-02-20
-          mkdir -p backup-repo/database backup-repo/code
+          mkdir -p backup-repo/database
           cp backup.dump backup-repo/database/backup-$DATE.dump
           cd backup-repo
           git config user.email "backup@encodingsolutions.com"
