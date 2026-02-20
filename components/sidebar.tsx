@@ -15,7 +15,7 @@ const navItems = [
   { href: '/dashboard/filmes', icon: Film, label: 'Filmes' },
   { href: '/dashboard/series', icon: Tv, label: 'Séries' },
   { href: '/dashboard/requests', icon: ClipboardList, label: 'Pedidos' },
-  { href: '/dashboard/atualizações', icon: RefreshCw, label: 'Atualizações' },
+  { href: '/dashboard/atualizacoes', icon: RefreshCw, label: 'Atualizações' },
 ]
 
 const adminItems = [
