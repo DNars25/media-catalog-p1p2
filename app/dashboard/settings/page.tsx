@@ -18,7 +18,7 @@ export default function SettingsPage() {
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (file.size > 2 * 1024 * 1024) { toast.error('Imagem muito grande (máx 2MB)'); return }
+    if (file && file.size > 2 * 1024 * 1024) { toast.error('Imagem muito grande (máx 2MB)'); return }
     setUploading(true)
     try {
       const formData = new FormData()
