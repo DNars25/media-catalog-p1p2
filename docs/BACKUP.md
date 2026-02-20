@@ -10,7 +10,14 @@ Diga para o assistente: "Preciso restaurar para a tag NOME_DA_TAG"
 | v-avatar-upload | Avatar upload funcionando |
 | v-avatar-upload-stable | Avatar upload estavel com sidebar |
 | v-login-encoding-solutions | Login com logo Encoding Solutions |
-| v-layout-login-stable | Layout + login estaveis (ponto atual) |
+| v-layout-login-stable | Layout + login estaveis |
+
+## Backup Automatico
+
+- Repositorio: https://github.com/DNars25/Nars-Backup (privado)
+- Frequencia: Todo dia as 6h UTC (3h Brasilia)
+- Conteudo: dump completo do banco PostgreSQL
+- Formato: database/backup-YYYY-MM-DD.dump
 
 ## Informacoes do projeto
 
@@ -21,7 +28,7 @@ Diga para o assistente: "Preciso restaurar para a tag NOME_DA_TAG"
 
 ## Funcionalidades implementadas
 
-- Login com NextAuth JWT
+- Login com NextAuth JWT + tela Encoding Solutions
 - Dashboard com contadores
 - Biblioteca com 14.251 titulos
 - Pedidos e Atualizacoes com paginacao
@@ -29,4 +36,4 @@ Diga para o assistente: "Preciso restaurar para a tag NOME_DA_TAG"
 - API /api/me para buscar avatar sem JWT
 - Sidebar com logo Encoding Solutions
 - Background layout aleatorio nas paginas
-- Tela de login redesenhada
+- Backup automatico diario do banco
