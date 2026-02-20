@@ -1,4 +1,4 @@
-"use client";
+"use client"; // v2
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
