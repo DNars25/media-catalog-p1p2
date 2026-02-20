@@ -95,9 +95,13 @@ export function Sidebar() {
 
       <div className="p-3 border-t border-border">
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg mb-1">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-            {session?.user?.name?.charAt(0).toUpperCase()}
-          </div>
+          {session?.user?.image ? (
+            <img src={session.user.image} alt={session.user.name || ""} className="w-8 h-8 rounded-full object-cover" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+              {session?.user?.name?.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{session?.user?.name}</p>
             <p className="text-xs text-muted-foreground truncate">{session?.user?.role}</p>
