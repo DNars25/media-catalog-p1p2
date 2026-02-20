@@ -12,8 +12,13 @@ jobs:
       - name: Checkout codigo
         uses: actions/checkout@v3
 
-      - name: Instalar postgresql-client
-        run: sudo apt-get install -y postgresql-client
+      - name: Instalar postgresql-client-17
+        run: |
+          sudo apt-get update
+          sudo sh -c "echo deb https://apt.postgresql.org/pub/repos/apt jammy-pgdg main > /etc/apt/sources.list.d/pgdg.list"
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
 
       - name: Dump do banco de dados
         env:
@@ -29,10 +34,10 @@ jobs:
         run: |
           DATE=2026-02-20
           mkdir -p backup-repo/database backup-repo/code
-          cp backup.dump backup-repo/database/backup-.dump
+          cp backup.dump backup-repo/database/backup-$DATE.dump
           cd backup-repo
           git config user.email "backup@encodingsolutions.com"
           git config user.name "Backup Bot"
           git add -A
-          git commit -m "Backup " || echo "Nada para commitar"
+          git commit -m "Backup $DATE" || echo "Nada para commitar"
           git push
