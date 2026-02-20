@@ -44,9 +44,9 @@ export function Sidebar() {
   }, [session?.user])
 
   return (
-    <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
-      <div className="p-4 border-b border-border flex items-center justify-center">
-        <img src="/nars.png" alt="Nars VHD" className="h-12 w-auto object-contain" />
+    <aside className="w-64 min-h-screen border-r border-border flex flex-col" style={{ backgroundColor: "#0d1b2a" }}>
+      <div className="border-b border-white/10 flex items-center justify-center" style={{ backgroundColor: "#0d1b2a", padding: "0" }}>
+        <img src="/nars.png" alt="Nars VHD" className="w-full object-contain" style={{ maxHeight: "90px" }} />
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
