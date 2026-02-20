@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 import {
   Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw,
 } from 'lucide-react'
@@ -27,6 +28,14 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const isAdmin = session?.user?.role === 'ADMIN'
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(r => r.json())
+      .then(d => setAvatarUrl(d.image ? d.image + "?t=" + Date.now() : null))
+      .catch(() => {})
+  }, [session?.user])
 
   return (
     <aside className="w-64 min-h-screen bg-card border-r border-border flex flex-col">
@@ -95,8 +104,8 @@ export function Sidebar() {
 
       <div className="p-3 border-t border-border">
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg mb-1">
-          {session?.user?.image ? (
-            <img src={session.user.image} alt={session.user.name || ""} className="w-8 h-8 rounded-full object-cover" />
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={session?.user?.name || ''} className="w-8 h-8 rounded-full object-cover" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
               {session?.user?.name?.charAt(0).toUpperCase()}
