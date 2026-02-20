@@ -81,17 +81,20 @@ export default function AtualizacoesPage() {
   const [filtroStatus, setFiltroStatus] = useState("");
   const [selected, setSelected] = useState<Update | null>(null);
   const isAdmin = session?.user?.role === "ADMIN";
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const userId = session?.user?.id || "";
   const fetchUpdates = useCallback(() => {
     setLoading(true);
-    const params = new URLSearchParams({ isUpdate: "true" });
+    const params = new URLSearchParams({ isUpdate: "true", page: page.toString(), limit: "50" });
     if (filtroStatus) params.append("status", filtroStatus);
     fetch("/api/requests?" + params.toString())
       .then((r) => r.json())
-      .then((d) => setUpdates(d.requests || []))
+      .then((d) => { setUpdates(d.requests || []); setTotal(d.total || 0); setTotalPages(d.pages || 1); })
       .catch(() => toast.error("Erro ao carregar atualizacoes"))
       .finally(() => setLoading(false));
-  }, [filtroStatus]);
+  }, [filtroStatus, page]);
   useEffect(() => { fetchUpdates(); }, [fetchUpdates]);
   async function handleStatusChange(id: string, status: string) {
     try {
@@ -122,7 +125,7 @@ export default function AtualizacoesPage() {
       </div>
       <div className="flex gap-2 mb-6 flex-wrap">
         {["", "ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"].map((s) => (
-          <button key={s} onClick={() => setFiltroStatus(s)} className={"px-4 py-1.5 rounded-full text-sm font-medium transition border " + (filtroStatus === s ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
+          <button key={s} onClick={() => setFiltroStatus(s); setPage(1)} className={"px-4 py-1.5 rounded-full text-sm font-medium transition border " + (filtroStatus === s ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
             {s === "" ? "Todos" : statusLabel[s]}
           </button>
         ))}
@@ -149,6 +152,16 @@ export default function AtualizacoesPage() {
               <span className={"text-white text-xs font-medium px-3 py-1 rounded-full " + (statusColor[u.status] || "bg-zinc-700")}>{statusLabel[u.status] || u.status}</span>
             </div>
           ))}
+        </div>
+      )}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-zinc-400">{total} atualizacoes no total</p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 disabled:opacity-40 transition">Anterior</button>
+            <span className="px-4 py-2 text-sm text-zinc-400">{page} / {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 disabled:opacity-40 transition">Próxima</button>
+          </div>
         </div>
       )}
       {selected && <DetalheModal update={selected} onClose={() => setSelected(null)} onStatusChange={handleStatusChange} onDelete={handleDelete} isAdmin={isAdmin} userId={userId} />}
