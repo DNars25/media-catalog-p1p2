@@ -35,10 +35,6 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as any).role
         token.image = (user as any).image
       }
-      if (token.id) {
-        const dbUser = await prisma.user.findUnique({ where: { id: token.id as string }, select: { image: true } })
-        if (dbUser) token.image = dbUser.image
-      }
       return token
     },
     async session({ session, token }) {
