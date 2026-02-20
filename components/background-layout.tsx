@@ -15,7 +15,7 @@ export function BackgroundLayout() {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        opacity: 0.07
+        opacity: 0.12
       }}
     />
   )
