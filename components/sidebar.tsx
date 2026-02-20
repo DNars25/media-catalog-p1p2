@@ -46,7 +46,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 min-h-screen border-r border-white/10 flex flex-col" style={{ backgroundColor: "#050d18" }}>
       <div className="border-b border-white/10 flex items-center justify-center" style={{ backgroundColor: "#0d1b2a", padding: "0" }}>
-        <img src="/nars-logo.png" alt="Nars VHD" className="w-full object-cover" style={{ height: "100px", objectPosition: "center" }} />
+        <img src="/nars-logo.png" alt="Encoding Solutions" className="w-full object-cover" style={{ height: "100px", objectPosition: "center" }} />
       </div>
 
       <nav className="flex-1 p-3 space-y-1">

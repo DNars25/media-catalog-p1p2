@@ -71,7 +71,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-xl">🎬</div>
           <div>
-            <h2 className="font-semibold">Nars VHD</h2>
+            <h2 className="font-semibold">Encoding Solutions</h2>
             <p className="text-xs text-muted-foreground">Seu acervo digital, organizado.</p>
           </div>
         </div>
