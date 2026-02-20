@@ -16,6 +16,6 @@ export async function POST(request: NextRequest) {
   const bytes = await file.arrayBuffer();
   const base64 = Buffer.from(bytes).toString('base64');
   const url = 'data:' + file.type + ';base64,' + base64;
-  await prisma.user.update({ where: { id: session.user.id }, data: { image: url } });
+  await prisma.user.update({ where: { id: userId }, data: { image: url } });
   return NextResponse.json({ url });
 }
