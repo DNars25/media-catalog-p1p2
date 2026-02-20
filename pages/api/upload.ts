@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
     if (allowed.includes(file.mimetype || '') === false) return res.status(400).json({ error: 'Tipo nao permitido' });
     const ext = (file.mimetype || 'image/png').split('/')[1].replace('jpeg', 'jpg');
-    const filename = 'avatars/' + uid + '.' + ext;
+    const filename = 'avatars/' + uid + '-' + Date.now() + '.' + ext;
     const fileBuffer = fs.readFileSync(file.filepath);
     const blob = await put(filename, fileBuffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
     await prisma.user.update({ where: { id: uid }, data: { image: blob.url } });
