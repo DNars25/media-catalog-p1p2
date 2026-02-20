@@ -25,7 +25,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#050d18' }}>
       <div className="w-full max-w-sm">
-        <div className="flex justify-center mb-8" style={{ mixBlendMode: "lighten" }}>
+        <div className="flex justify-center mb-8" style={{}}>
           <img src="/Login.png" alt="Encoding Solutions" className="h-40 w-auto object-contain" />
         </div>
         <div className="rounded-2xl p-8" style={{ backgroundColor: '#0f1923' }}>
