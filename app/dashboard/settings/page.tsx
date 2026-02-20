@@ -27,6 +27,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       const { url } = await res.json()
       setAvatarUrl(url + "?t=" + Date.now())
+      window.dispatchEvent(new Event("avatar-updated"))
       toast.success('Avatar atualizado!')
     } catch (err: any) {
       toast.error(err.message || 'Erro inesperado')

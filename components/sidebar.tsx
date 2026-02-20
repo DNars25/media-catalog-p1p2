@@ -31,10 +31,16 @@ export function Sidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/me')
-      .then(r => r.json())
-      .then(d => setAvatarUrl(d.image ? d.image + "?t=" + Date.now() : null))
-      .catch(() => {})
+    if (session == null || session.user == null) return
+    const loadAvatar = () => {
+      fetch('/api/me')
+        .then(r => r.json())
+        .then(d => setAvatarUrl(d.image ? d.image + '?t=' + Date.now() : null))
+        .catch(() => {})
+    }
+    loadAvatar()
+    window.addEventListener('avatar-updated', loadAvatar)
+    return () => window.removeEventListener('avatar-updated', loadAvatar)
   }, [session?.user])
 
   return (
@@ -56,7 +62,7 @@ export function Sidebar() {
         {navItems.map((item) => {
           const active = item.href === '/dashboard'
             ? pathname === '/dashboard'
-            : (pathname || "").startsWith(item.href)
+            : (pathname || '').startsWith(item.href)
           return (
             <Link
               key={item.href}
@@ -81,7 +87,7 @@ export function Sidebar() {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Admin</p>
             </div>
             {adminItems.map((item) => {
-              const active = (pathname || "").startsWith(item.href)
+              const active = (pathname || '').startsWith(item.href)
               return (
                 <Link
                   key={item.href}
