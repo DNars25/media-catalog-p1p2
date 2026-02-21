@@ -13,12 +13,20 @@ export async function GET(req: Request) {
   const [local, tmdbRes] = await Promise.all([
     prisma.title.findMany({
       where: { type: localType, title: { contains: query, mode: 'insensitive' } },
-      select: { id: true, title: true, year: true, server: true, type: true, posterUrl: true },
+      select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true },
       take: 10
     }),
     fetch('https://api.themoviedb.org/3/search/' + tmdbType + '?api_key=' + process.env.TMDB_API_KEY + '&query=' + encodeURIComponent(query) + '&language=pt-BR')
       .then(r => r.json()).catch(() => ({ results: [] }))
   ])
+
+  const localMapped = local.map((t: any) => ({
+    id: t.id,
+    title: t.title,
+    year: t.releaseYear,
+    server: t.hasP1 && t.hasP2 ? 'P1 e P2' : t.hasP1 ? 'P1' : t.hasP2 ? 'P2' : 'Nenhum',
+    posterUrl: t.posterUrl
+  }))
 
   const tmdbResults = (tmdbRes.results || []).slice(0, 10).map((r: any) => ({
     tmdbId: r.id,
@@ -28,5 +36,5 @@ export async function GET(req: Request) {
     overview: r.overview
   }))
 
-  return NextResponse.json({ local, tmdb: tmdbResults })
+  return NextResponse.json({ local: localMapped, tmdb: tmdbResults })
 }
