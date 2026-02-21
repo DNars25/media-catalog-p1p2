@@ -161,9 +161,9 @@ export default function TitlesPage() {
               ) : (
                 titles.map((t) => (
                   <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                  <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                    <td className="py-3 px-4 text-xs text-zinc-500 font-mono">{t.tmdbId}</td>
                     <td className="py-3 px-4">
-                      <td className="py-3 px-4 text-xs text-zinc-500 font-mono">{t.tmdbId}</td>
-                      {t.posterUrl ? (
                         <div className="w-9 h-14 rounded overflow-hidden bg-muted shrink-0">
                           <img src={t.posterUrl} alt={t.title} className="w-full h-full object-cover" />
                         </div>
