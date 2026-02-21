@@ -70,7 +70,7 @@ export default async function DashboardPage() {
     <div className="p-5">
       <div className="mb-4">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Visão geral do catálogo</p>
+        
       </div>
 
       {/* Stats */}
