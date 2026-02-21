@@ -10,22 +10,30 @@ export async function GET(req: Request) {
   const tmdbType = type === 'MOVIE' ? 'movie' : 'tv'
   const localType = type === 'MOVIE' ? 'MOVIE' : 'TV'
 
-  const [local, tmdbRes] = await Promise.all([
-    prisma.title.findMany({
-      where: { type: localType, title: { contains: query, mode: 'insensitive' } },
-      select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true, tmdbId: true },
-      take: 10
-    }),
-    fetch('https://api.themoviedb.org/3/search/' + tmdbType + '?api_key=' + process.env.TMDB_API_KEY + '&query=' + encodeURIComponent(query) + '&language=pt-BR')
-      .then(r => r.json()).catch(() => ({ results: [] }))
-  ])
+  const tmdbRes = await fetch('https://api.themoviedb.org/3/search/' + tmdbType + '?api_key=' + process.env.TMDB_API_KEY + '&query=' + encodeURIComponent(query) + '&language=pt-BR')
+    .then(r => r.json()).catch(() => ({ results: [] }))
+
+  const tmdbIds = (tmdbRes.results || []).map((r: any) => r.id)
+
+  const local = await prisma.title.findMany({
+    where: {
+      type: localType,
+      OR: [
+        { title: { contains: query, mode: 'insensitive' } },
+        { tmdbId: { in: tmdbIds } }
+      ]
+    },
+    select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true, tmdbId: true },
+    take: 20
+  })
 
   const localMapped = local.map((t: any) => ({
     id: t.id,
     title: t.title,
     year: t.releaseYear,
     server: t.hasP1 && t.hasP2 ? 'P1 e P2' : t.hasP1 ? 'P1' : t.hasP2 ? 'P2' : 'Nenhum',
-    posterUrl: t.posterUrl
+    posterUrl: t.posterUrl,
+    tmdbId: t.tmdbId
   }))
 
   const tmdbResults = (tmdbRes.results || []).slice(0, 10).map((r: any) => ({
