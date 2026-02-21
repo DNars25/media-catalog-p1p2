@@ -91,6 +91,7 @@ model Request {
   tmdbId           Int?
   posterUrl        String?
   notes            String?         @db.Text
+  requestedBy      String?
   audioType        String?
   preferredSystem  PreferredSystem?
   status           RequestStatus   @default(ABERTO)
