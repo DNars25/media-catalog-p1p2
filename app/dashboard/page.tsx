@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-2 mb-7">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-7">
         {cards.map((card) => (
           <Link key={card.label} href={card.href}
             className={"bg-card border rounded-xl p-3 " + card.bg + " hover:scale-[1.02] transition-all"}>
