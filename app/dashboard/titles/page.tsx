@@ -133,6 +133,7 @@ export default function TitlesPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Poster</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">TMDB ID</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ano</th>
@@ -161,6 +162,7 @@ export default function TitlesPage() {
                 titles.map((t) => (
                   <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                     <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-xs text-zinc-500 font-mono">{t.tmdbId}</td>
                       {t.posterUrl ? (
                         <div className="w-9 h-14 rounded overflow-hidden bg-muted shrink-0">
                           <img src={t.posterUrl} alt={t.title} className="w-full h-full object-cover" />
