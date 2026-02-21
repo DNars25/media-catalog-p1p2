@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const [local, tmdbRes] = await Promise.all([
     prisma.title.findMany({
       where: { type: localType, title: { contains: query, mode: 'insensitive' } },
-      select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true },
+      select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true, tmdbId: true },
       take: 10
     }),
     fetch('https://api.themoviedb.org/3/search/' + tmdbType + '?api_key=' + process.env.TMDB_API_KEY + '&query=' + encodeURIComponent(query) + '&language=pt-BR')

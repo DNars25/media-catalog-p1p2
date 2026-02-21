@@ -74,7 +74,7 @@ export default function RecepcaoPage() {
               <div>
                 <p className='text-xs text-gray-500 uppercase tracking-wider mb-2 px-1'>Resultados TMDB</p>
                 {results.tmdb.map((item: any) => {
-                  const inLocal = results.local.some((l: any) => l.title.toLowerCase() === item.title.toLowerCase())
+                  const inLocal = results.local.some((l: any) => l.tmdbId === item.tmdbId || l.title.toLowerCase() === item.title.toLowerCase())
                   const done = requested.includes(item.tmdbId)
                   return (
                     <div key={item.tmdbId} className='flex items-center gap-3 p-3 rounded-xl mb-2' style={{ backgroundColor: '#151515' }}>
