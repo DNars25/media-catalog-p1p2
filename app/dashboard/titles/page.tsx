@@ -161,7 +161,6 @@ export default function TitlesPage() {
               ) : (
                 titles.map((t) => (
                   <tr key={t.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                    <td className="py-3 px-4 text-xs text-zinc-500 font-mono">{t.tmdbId}</td>
                     <td className="py-3 px-4">
                       {t.posterUrl ? (
                         <div className="w-9 h-14 rounded overflow-hidden bg-muted shrink-0">
@@ -171,6 +170,7 @@ export default function TitlesPage() {
                         <div className="w-9 h-14 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">?</div>
                       )}
                     </td>
+                    <td className="py-3 px-4 text-xs text-zinc-500 font-mono">{t.tmdbId}</td>
                     <td className="py-3 px-4">
                       <p className="font-medium text-sm">{t.title}</p>
                       {t.type === 'TV' && t.tvStatus && (
