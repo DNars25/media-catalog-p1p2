@@ -129,7 +129,6 @@ export default function AtualizacoesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
-  const [search, setSearch] = useState("");
   const isAdmin = session?.user?.role === "ADMIN";
   const userId = session?.user?.id || "";
 
