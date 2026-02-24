@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (error) return error
 
   const body = await req.json()
-  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType } = body
+  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId } = body
 
   if (!requestedTitle) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
 
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       isUpdate: isUpdate || false,
       seasonNumber: seasonNumber || null,
       audioType: audioType || null,
+      linkedTitleId: linkedTitleId || null,
       createdById: session!.user.id,
     },
   })
