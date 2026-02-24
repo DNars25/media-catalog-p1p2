@@ -7,6 +7,7 @@ export function BackgroundLayout() {
     const n = Math.random() > 0.5 ? '1' : '2'
     setBg('/layout/Layout-' + n + '.png')
   }, [])
+  if (bg === "") return null
   return (
     <div
       className="fixed inset-0 z-0 pointer-events-none"

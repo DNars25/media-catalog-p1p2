@@ -1,14 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-function normalize(str: string) {
-  return str.toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/&/g, 'e')
-    .replace(/[^a-z0-9 ]/g, '')
-    .replace(/s+/g, ' ').trim()
-}
-
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('q') || ''
@@ -28,7 +20,8 @@ export async function GET(req: Request) {
       type: localType,
       OR: [
         { title: { contains: query, mode: 'insensitive' } },
-        { title: { contains: query.replace(/&/g, 'e').replace(/e/g, '&'), mode: 'insensitive' } },
+        { title: { contains: query.replace(/&/g, 'e'), mode: 'insensitive' } },
+        { title: { contains: query.replace(/e/g, '&'), mode: 'insensitive' } },
         { tmdbId: { in: tmdbIds } }
       ]
     },
