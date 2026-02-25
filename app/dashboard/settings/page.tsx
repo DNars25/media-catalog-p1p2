@@ -2,12 +2,40 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Camera, Loader2 } from 'lucide-react'
+import { Camera, Loader2, DatabaseZap } from 'lucide-react'
+
+interface BackfillResult {
+  summary: { processed: number; skipped: number; errors: number; totalEpisodes: number; totalTitles: number }
+  details: { title: string; episodes: number; status: 'ok' | 'skip' | 'error'; reason?: string }[]
+}
 
 export default function SettingsPage() {
   const { data: session } = useSession()
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [backfilling, setBackfilling] = useState(false)
+  const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(null)
+  const isAdmin = session?.user?.role === 'ADMIN'
+
+  async function handleBackfill() {
+    setBackfilling(true)
+    setBackfillResult(null)
+    try {
+      const res = await fetch('/api/admin/backfill-episodes', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao executar')
+      setBackfillResult(data)
+      if (data.summary.processed > 0) {
+        toast.success(`${data.summary.processed} séries atualizadas — ${data.summary.totalEpisodes} episódios criados`)
+      } else {
+        toast.info('Nenhuma série nova para sincronizar')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro inesperado')
+    } finally {
+      setBackfilling(false)
+    }
+  }
 
   useEffect(() => {
     fetch('/api/me')
@@ -98,6 +126,65 @@ export default function SettingsPage() {
           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">v1.0</span>
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="mt-6 bg-card border border-border rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-1">
+            <DatabaseZap className="w-5 h-5 text-primary" />
+            <h2 className="font-semibold">Sincronizar Episódios</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Popula automaticamente os episódios de todas as séries que ainda não têm essa informação registrada,
+            consultando os dados do TMDB. Cada série recebe todos os episódios de todas as temporadas disponíveis.
+          </p>
+
+          <button
+            onClick={handleBackfill}
+            disabled={backfilling}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50"
+          >
+            {backfilling ? <Loader2 className="w-4 h-4 animate-spin" /> : <DatabaseZap className="w-4 h-4" />}
+            {backfilling ? 'Sincronizando... (pode demorar)' : 'Sincronizar agora'}
+          </button>
+
+          {backfillResult && (
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { label: 'Séries', value: backfillResult.summary.totalTitles, color: 'text-foreground' },
+                  { label: 'Atualizadas', value: backfillResult.summary.processed, color: 'text-green-500' },
+                  { label: 'Ignoradas', value: backfillResult.summary.skipped, color: 'text-muted-foreground' },
+                  { label: 'Erros', value: backfillResult.summary.errors, color: 'text-red-500' },
+                ].map(s => (
+                  <div key={s.label} className="bg-muted rounded-lg p-3 text-center">
+                    <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total de episódios criados: <span className="font-bold text-foreground">{backfillResult.summary.totalEpisodes.toLocaleString('pt-BR')}</span>
+              </p>
+
+              {backfillResult.details.length > 0 && (
+                <details className="mt-2">
+                  <summary className="text-xs text-primary cursor-pointer hover:underline">Ver detalhes por série</summary>
+                  <div className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                    {backfillResult.details.map((d, i) => (
+                      <div key={i} className="flex items-center justify-between px-3 py-2 text-xs">
+                        <span className="text-foreground truncate flex-1 mr-2">{d.title}</span>
+                        {d.status === 'ok' && <span className="text-green-500 shrink-0">+{d.episodes} eps</span>}
+                        {d.status === 'skip' && <span className="text-muted-foreground shrink-0">ignorado</span>}
+                        {d.status === 'error' && <span className="text-red-500 shrink-0" title={d.reason}>erro</span>}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,10 @@
 import { z } from 'zod'
 
+const EpisodeItemSchema = z.object({
+  season: z.number().int().min(1),
+  episode: z.number().int().min(1),
+})
+
 export const TitleCreateSchema = z.object({
   tmdbId: z.number().int(),
   type: z.enum(['MOVIE', 'TV']),
@@ -14,6 +19,11 @@ export const TitleCreateSchema = z.object({
   internalStatus: z.enum(['AGUARDANDO_DOWNLOAD', 'DISPONIVEL', 'INDISPONIVEL']).default('AGUARDANDO_DOWNLOAD'),
   hasP1: z.boolean().default(false),
   hasP2: z.boolean().default(false),
+  episodesData: z.array(EpisodeItemSchema).optional().default([]),
+})
+
+export const EpisodesUpdateSchema = z.object({
+  episodesData: z.array(EpisodeItemSchema),
 })
 
 export const TitleUpdateSchema = TitleCreateSchema.partial()

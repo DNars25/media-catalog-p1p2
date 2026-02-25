@@ -77,12 +77,25 @@ model Title {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   requests       Request[]
+  episodes       TitleEpisode[]
 
   @@unique([tmdbId, type])
   @@index([title])
   @@index([hasP1])
   @@index([hasP2])
   @@index([internalStatus])
+}
+
+model TitleEpisode {
+  id        String   @id @default(uuid())
+  titleId   String
+  title     Title    @relation(fields: [titleId], references: [id], onDelete: Cascade)
+  season    Int
+  episode   Int
+  createdAt DateTime @default(now())
+
+  @@unique([titleId, season, episode])
+  @@index([titleId])
 }
 
 model Request {

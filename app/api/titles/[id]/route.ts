@@ -9,7 +9,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const title = await prisma.title.findUnique({
     where: { id: params.id },
-    include: { createdBy: { select: { name: true, email: true } } },
+    include: {
+      createdBy: { select: { name: true, email: true } },
+      episodes: { orderBy: [{ season: 'asc' }, { episode: 'asc' }] },
+    },
   })
   if (!title) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(title)

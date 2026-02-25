@@ -45,9 +45,8 @@ export default function NewTitlePage() {
     tvEpisodes: '',
   })
   const [selectedSeason, setSelectedSeason] = useState(1)
-  const [showSeasonModal, setShowSeasonModal] = useState(false)
-  const [modalSeason, setModalSeason] = useState(1)
-  const [modalEpisodes, setModalEpisodes] = useState(1)
+  const [selectedEpisodes, setSelectedEpisodes] = useState<Record<number, number[]>>({})
+  const [bulkCount, setBulkCount] = useState('')
   const searchTimeout = useRef<NodeJS.Timeout>()
 
   const handleSearch = (value: string) => {
@@ -66,6 +65,7 @@ export default function NewTitlePage() {
     setResults([])
     setQuery(r.title)
     setLoading(true)
+    setSelectedEpisodes({})
     const type = r.type === 'MOVIE' ? 'movie' : 'tv'
     const res = await fetch('/api/tmdb/details?type=' + type + '&tmdbId=' + r.tmdbId)
     const data = await res.json()
@@ -74,18 +74,65 @@ export default function NewTitlePage() {
     setLoading(false)
   }
 
-  const handleSubmit = async () => {
-    if (selected == null) return
-    if (selected.type === "TV" && form.tvStatus === "EM_ANDAMENTO") {
-      setShowSeasonModal(true)
-      return
-    }
-    await doSave(null, null)
+  const toggleEpisode = (season: number, ep: number) => {
+    setSelectedEpisodes(prev => {
+      const current = prev[season] || []
+      const idx = current.indexOf(ep)
+      if (idx === -1) {
+        return { ...prev, [season]: [...current, ep].sort((a, b) => a - b) }
+      } else {
+        const next = current.filter(e => e !== ep)
+        return { ...prev, [season]: next }
+      }
+    })
   }
 
-  const doSave = async (seasonNumber: number | null, episodeCount: number | null) => {
+  const selectAllEpisodes = (season: Season) => {
+    const all = Array.from({ length: season.episode_count }, (_, i) => i + 1)
+    setSelectedEpisodes(prev => ({ ...prev, [season.season_number]: all }))
+  }
+
+  const clearEpisodes = (seasonNumber: number) => {
+    setSelectedEpisodes(prev => ({ ...prev, [seasonNumber]: [] }))
+  }
+
+  const applyToAllSeasons = () => {
+    const count = parseInt(bulkCount)
+    if (!count || count < 1) return
+    const updates: Record<number, number[]> = {}
+    for (const s of seasons) {
+      const max = Math.min(count, s.episode_count)
+      updates[s.season_number] = Array.from({ length: max }, (_, i) => i + 1)
+    }
+    setSelectedEpisodes(updates)
+  }
+
+  const buildEpisodesData = () => {
+    return Object.entries(selectedEpisodes).flatMap(([season, eps]) =>
+      eps.map(ep => ({ season: parseInt(season), episode: ep }))
+    )
+  }
+
+  const buildNotesFromEpisodes = () => {
+    const parts = Object.entries(selectedEpisodes)
+      .filter(([, eps]) => eps.length > 0)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .map(([season, eps]) => {
+        const sorted = [...eps].sort((a, b) => a - b)
+        return `Temp ${season}: eps ${sorted[0]}-${sorted[sorted.length - 1]}`
+      })
+    return parts.length > 0 ? parts.join(', ') : null
+  }
+
+  const handleSubmit = async () => {
+    if (selected == null) return
+    await doSave()
+  }
+
+  const doSave = async () => {
     if (selected == null) return
     setSaving(true)
+    const episodesData = buildEpisodesData()
     const res = await fetch('/api/titles', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,13 +151,14 @@ export default function NewTitlePage() {
         hasP2: form.hasP2,
         audioType: form.audioType,
         internalStatus: 'DISPONIVEL',
+        episodesData,
       })
     })
     setSaving(false)
     if (res.ok) {
       const savedTitle = await res.json()
       if (form.tvStatus === 'EM_ANDAMENTO') {
-        const seasonEp = episodeCount ? 'No Servidor: ' + seasonNumber + ' temp/' + episodeCount + ' eps. TMDB: ' + form.tvSeasons + ' temp/' + form.tvEpisodes + ' eps.' : null
+        const notes = buildNotesFromEpisodes()
         await fetch('/api/requests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -121,8 +169,7 @@ export default function NewTitlePage() {
             isUpdate: true,
             status: 'ABERTO',
             linkedTitleId: savedTitle.id,
-            seasonNumber: seasonNumber,
-            notes: seasonEp
+            notes,
           })
         })
       }
@@ -143,31 +190,11 @@ export default function NewTitlePage() {
 
   const maxSeasons = form.tvSeasons ? parseInt(form.tvSeasons) : 999
   const seasons = (selected?.seasons || []).filter(s => s.season_number > 0 && s.season_number <= maxSeasons)
+  const currentSeason = seasons.find(s => s.season_number === selectedSeason)
+  const selectedEpsInSeason = selectedEpisodes[selectedSeason] || []
 
   return (
     <div className='p-8 max-w-2xl'>
-      {showSeasonModal && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center' style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-          <div className='rounded-2xl p-6 w-full max-w-sm' style={{ backgroundColor: '#151515' }}>
-            <h2 className='text-lg font-bold mb-1'>Temporadas no Servidor</h2>
-            <p className='text-sm text-gray-400 mb-4'>Informe quantas temporadas e episódios já estão disponíveis</p>
-            <div className='space-y-3 mb-5'>
-              <div>
-                <label className='text-sm text-gray-400 block mb-1'>Temporadas disponíveis</label>
-                <input type='number' min={1} value={modalSeason} onChange={e => setModalSeason(parseInt(e.target.value) || 1)} className='w-full rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none' style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }} />
-              </div>
-              <div>
-                <label className='text-sm text-gray-400 block mb-1'>Episódios disponíveis</label>
-                <input type='number' min={1} value={modalEpisodes} onChange={e => setModalEpisodes(parseInt(e.target.value) || 1)} className='w-full rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none' style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }} />
-              </div>
-            </div>
-            <div className='flex gap-2'>
-              <button onClick={() => setShowSeasonModal(false)} className='flex-1 py-2.5 rounded-lg text-sm font-medium text-gray-400' style={{ backgroundColor: '#1a1a1a' }}>Cancelar</button>
-              <button onClick={async () => { setShowSeasonModal(false); await doSave(modalSeason, modalEpisodes) }} className='flex-1 py-2.5 rounded-lg text-sm font-medium text-white' style={{ backgroundColor: '#f97316' }}>Confirmar</button>
-            </div>
-          </div>
-        </div>
-      )}
       <div className='mb-8'>
         <h1 className='text-3xl font-bold'>Cadastrar Título</h1>
         <p className='text-muted-foreground mt-1'>Busque no TMDB e importe os dados automaticamente</p>
@@ -255,30 +282,75 @@ export default function NewTitlePage() {
                 </select>
               </div>
 
-
-
               {seasons.length > 0 && (
                 <div>
                   <label className='text-sm font-medium text-muted-foreground block mb-2'>Episódios por Temporada</label>
-                  <div className='flex gap-2 flex-wrap mb-3'>
-                    {seasons.map(s => (
-                      <button key={s.season_number} onClick={() => setSelectedSeason(s.season_number)} className={'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ' + (selectedSeason === s.season_number ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:text-foreground')}>
-                        T{s.season_number}
-                      </button>
-                    ))}
+
+                  <div className='flex items-center gap-2 mb-3 p-3 bg-muted rounded-lg'>
+                    <span className='text-xs text-muted-foreground shrink-0'>Aplicar</span>
+                    <input
+                      type='number'
+                      min={1}
+                      value={bulkCount}
+                      onChange={e => setBulkCount(e.target.value)}
+                      placeholder='qtd'
+                      className='w-16 bg-background border border-border rounded px-2 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-primary'
+                    />
+                    <span className='text-xs text-muted-foreground shrink-0'>eps às {seasons.length} temporadas</span>
+                    <button
+                      onClick={applyToAllSeasons}
+                      disabled={!bulkCount || parseInt(bulkCount) < 1}
+                      className='ml-auto px-3 py-1 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition disabled:opacity-40'
+                    >
+                      Aplicar a todas
+                    </button>
                   </div>
-                  {seasons.filter(s => s.season_number === selectedSeason).map(s => (
-                    <div key={s.season_number} className='bg-muted rounded-xl p-4 flex items-center justify-between'>
-                      <div>
-                        <p className='text-sm font-semibold'>{s.name}</p>
-                        <p className='text-xs text-muted-foreground mt-0.5'>Temporada {s.season_number}</p>
+
+                  <div className='flex gap-2 flex-wrap mb-3'>
+                    {seasons.map(s => {
+                      const count = (selectedEpisodes[s.season_number] || []).length
+                      return (
+                        <button key={s.season_number} onClick={() => setSelectedSeason(s.season_number)} className={'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ' + (selectedSeason === s.season_number ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:text-foreground')}>
+                          T{s.season_number}
+                          {count > 0 && <span className={'rounded-full px-1.5 py-0.5 text-[10px] font-bold ' + (selectedSeason === s.season_number ? 'bg-white/20' : 'bg-primary/20 text-primary')}>{count}</span>}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {currentSeason && (
+                    <div className='bg-muted rounded-xl p-4'>
+                      <div className='flex items-center justify-between mb-3'>
+                        <p className='text-sm font-semibold'>{currentSeason.name}</p>
+                        <div className='flex gap-2'>
+                          <button onClick={() => selectAllEpisodes(currentSeason)} className='px-2.5 py-1 rounded-md text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition'>
+                            Todos
+                          </button>
+                          <button onClick={() => clearEpisodes(currentSeason.season_number)} className='px-2.5 py-1 rounded-md text-xs font-medium bg-muted-foreground/20 text-muted-foreground hover:bg-muted-foreground/30 transition'>
+                            Limpar
+                          </button>
+                        </div>
                       </div>
-                      <div className='text-right'>
-                        <p className='text-2xl font-bold text-primary'>{s.episode_count}</p>
-                        <p className='text-xs text-muted-foreground'>episódios</p>
+                      <div className='flex flex-wrap gap-1.5'>
+                        {Array.from({ length: currentSeason.episode_count }, (_, i) => i + 1).map(ep => {
+                          const isSelected = selectedEpsInSeason.includes(ep)
+                          return (
+                            <button
+                              key={ep}
+                              onClick={() => toggleEpisode(currentSeason.season_number, ep)}
+                              className={'w-10 h-8 rounded-md text-xs font-semibold transition-all ' + (isSelected ? 'bg-primary text-white' : 'bg-background text-muted-foreground hover:text-foreground hover:bg-secondary')}
+                            >
+                              {ep}
+                            </button>
+                          )
+                        })}
                       </div>
+                      <p className='text-xs text-muted-foreground mt-3'>
+                        {selectedEpsInSeason.length} de {currentSeason.episode_count} episódios selecionados
+                      </p>
                     </div>
-                  ))}
+                  )}
+
                   <div className='mt-3 text-center'>
                     <p className='text-xs text-muted-foreground'>Total geral: <span className='font-bold text-foreground'>{form.tvEpisodes} episódios</span></p>
                   </div>

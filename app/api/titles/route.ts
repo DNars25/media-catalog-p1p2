@@ -34,6 +34,8 @@ export async function GET(req: NextRequest) {
   if (audioType) where.audioType = audioType
   if (internalStatus) where.internalStatus = internalStatus
   if (tvStatus) where.tvStatus = tvStatus
+  const tmdbIdParam = sp.get('tmdbId')
+  if (tmdbIdParam) where.tmdbId = parseInt(tmdbIdParam)
 
   const [total, titles] = await Promise.all([
     prisma.title.count({ where }),
@@ -62,9 +64,20 @@ export async function POST(req: NextRequest) {
   })
   if (existing) return NextResponse.json({ error: 'Title already exists' }, { status: 409 })
 
+  const { episodesData, ...titleData } = parsed.data
   const title = await prisma.title.create({
-    data: { ...parsed.data, createdById: session!.user.id },
+    data: { ...titleData, createdById: session!.user.id },
   })
+
+  if (episodesData && episodesData.length > 0) {
+    await prisma.titleEpisode.createMany({
+      data: episodesData.map(e => ({
+        titleId: title.id,
+        season: e.season,
+        episode: e.episode,
+      }))
+    })
+  }
 
   return NextResponse.json(title, { status: 201 })
 }
