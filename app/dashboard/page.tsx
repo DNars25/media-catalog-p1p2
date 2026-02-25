@@ -106,7 +106,7 @@ export default async function DashboardPage() {
         {open.movies.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">Nenhum pedido de filme em aberto</div>
         ) : (
-          <div className="flex gap-4">
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-5 px-5 sm:mx-0 sm:px-0">
             {open.movies.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=MOVIE&status=ABERTO" barColor="bg-orange-500" />)}
           </div>
         )}
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
         {open.series.length === 0 ? (
           <div className="bg-card border border-border rounded-xl p-6 text-center text-muted-foreground text-sm">Nenhum pedido de série em aberto</div>
         ) : (
-          <div className="flex gap-4">
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-5 px-5 sm:mx-0 sm:px-0">
             {open.series.map((r) => <RequestCard key={r.id} r={r} href="/dashboard/requests?type=TV&status=ABERTO" barColor="bg-green-500" />)}
           </div>
         )}

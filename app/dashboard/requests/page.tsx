@@ -246,7 +246,7 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       {audioModal && audioModal.type === 'MOVIE' && (
         <AudioMovieModal
           current={audioModal.current}
@@ -264,7 +264,7 @@ export default function RequestsPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Pedidos</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Pedidos</h1>
           <p className="text-muted-foreground mt-1">{total} pedidos</p>
         </div>
         <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
@@ -273,7 +273,7 @@ export default function RequestsPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
-        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1) }} placeholder="Buscar pedidos..." className="w-64" />
+        <SearchInput value={search} onChange={(v) => { setSearch(v); setPage(1) }} placeholder="Buscar pedidos..." className="w-full sm:w-64" />
         <div className="flex gap-1 bg-muted rounded-lg p-1">
           {[{ v: '', l: 'Todos' }, { v: 'MOVIE', l: '🎬 Filmes' }, { v: 'TV', l: '📺 Séries' }].map(({ v, l }) => (
             <button key={v} onClick={() => { setFilterType(v); setPage(1) }}
@@ -292,12 +292,17 @@ export default function RequestsPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {['Título', 'Tipo', 'Status', 'Áudio', 'Sistema', 'Autor', 'Data'].map((h) => (
-                <th key={h} className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{h}</th>
-              ))}
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Tipo</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Áudio</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Sistema</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Autor</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Data</th>
               {isAdmin && <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>}
             </tr>
           </thead>
@@ -320,7 +325,7 @@ export default function RequestsPage() {
                         </div>
                       </div>
                   </td>
-                  <td className="py-3 px-4"><Badge status={r.type as any} /></td>
+                  <td className="py-3 px-4 hidden sm:table-cell"><Badge status={r.type as any} /></td>
                   <td className="py-3 px-4">
                     {isAdmin ? (
                       <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value, r.type, r.audioType)} className="bg-muted border border-border rounded-md px-2 py-1 text-xs focus:outline-none">
@@ -328,7 +333,7 @@ export default function RequestsPage() {
                       </select>
                     ) : <Badge status={r.status as any} />}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 hidden md:table-cell">
                     {r.status === 'CONCLUIDO' ? (
                       <div className="flex items-center gap-2">
                         <span className={"text-xs px-2 py-1 rounded-lg font-medium " + (audio.complete ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400')}>
@@ -347,9 +352,9 @@ export default function RequestsPage() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{{ P1: 'B2P', P2: 'P2B', AMBOS: 'Ambos' }[r.preferredSystem ?? ''] || r.preferredSystem || '—'}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{r.createdBy.name}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">{{ P1: 'B2P', P2: 'P2B', AMBOS: 'Ambos' }[r.preferredSystem ?? ''] || r.preferredSystem || '—'}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground hidden lg:table-cell">{r.createdBy.name}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap hidden lg:table-cell">{formatDate(r.createdAt)}</td>
                   {isAdmin && (
                     <td className="py-3 px-4 text-right">
                       <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
@@ -362,6 +367,7 @@ export default function RequestsPage() {
             })}
           </tbody>
         </table>
+        </div>
         {pages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border">
             <p className="text-sm text-muted-foreground">Página {page} de {pages}</p>

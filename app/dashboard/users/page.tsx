@@ -69,10 +69,10 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Usuários</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Usuários</h1>
           <p className="text-muted-foreground mt-1">{users.length} usuários cadastrados</p>
         </div>
         <button
@@ -85,13 +85,14 @@ export default function UsersPage() {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome</th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Email</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Criado em</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Criado em</th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>
             </tr>
           </thead>
@@ -109,7 +110,7 @@ export default function UsersPage() {
                       <span className="font-medium text-sm">{u.name}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{u.email}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground hidden sm:table-cell">{u.email}</td>
                   <td className="py-3 px-4">
                     <select
                       value={u.role}
@@ -120,13 +121,13 @@ export default function UsersPage() {
                       <option value="ADMIN">ADMIN</option>
                     </select>
                   </td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{formatDate(u.createdAt)}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">{formatDate(u.createdAt)}</td>
                   <td className="py-3 px-4 text-right">
                     <button
                       onClick={() => handleDelete(u.id)}
-                      className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
@@ -134,6 +135,7 @@ export default function UsersPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Create user modal */}

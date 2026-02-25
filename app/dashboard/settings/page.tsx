@@ -65,8 +65,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-2">Configurações</h1>
+    <div className="p-4 sm:p-8 max-w-2xl">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-2">Configurações</h1>
       <p className="text-muted-foreground">Personalize sua conta</p>
       <div className="mt-8 bg-card border border-border rounded-xl p-6">
         <h2 className="font-semibold mb-4">Avatar</h2>
@@ -149,7 +149,7 @@ export default function SettingsPage() {
 
           {backfillResult && (
             <div className="mt-4 space-y-3">
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'Séries', value: backfillResult.summary.totalTitles, color: 'text-foreground' },
                   { label: 'Atualizadas', value: backfillResult.summary.processed, color: 'text-green-500' },

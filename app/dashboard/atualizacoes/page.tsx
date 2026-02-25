@@ -128,7 +128,7 @@ function EpisodeGrid({
                   onClick={() => onToggle(selectedSeason, ep)}
                   title={wasAlreadySaved ? "Já estava no servidor" : isSelected ? "Adicionado agora" : "Não disponível"}
                   className={
-                    "w-9 h-7 rounded text-xs font-semibold transition " +
+                    "w-10 h-8 rounded text-xs font-semibold transition " +
                     (isSelected
                       ? wasAlreadySaved
                         ? "bg-orange-500 text-white"
@@ -425,7 +425,7 @@ function DetalheModal({ update, onClose, onStatusChange, onDelete, isAdmin, user
 
             <div>
               <label className="text-xs text-zinc-400 block mb-1">Tipo de Áudio</label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {["DUBLADO", "LEGENDADO", "DUBLADO_LEGENDADO"].map((a) => (
                   <button key={a} onClick={() => setAudio(a)} className={"px-3 py-1.5 rounded-lg text-xs font-medium transition " + (audio === a ? "bg-orange-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}>
                     {a === "DUBLADO" ? "Dublado" : a === "LEGENDADO" ? "Legendado" : "Dub+Leg"}

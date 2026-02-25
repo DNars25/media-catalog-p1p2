@@ -84,9 +84,9 @@ export default function TitlesPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Biblioteca</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Biblioteca</h1>
         <p className="text-muted-foreground mt-1">{total} títulos encontrados</p>
       </div>
 
@@ -96,7 +96,7 @@ export default function TitlesPage() {
           value={search}
           onChange={(v) => { setSearch(v); setPage(1) }}
           placeholder="Buscar títulos..."
-          className="w-64"
+          className="w-full sm:w-64"
         />
 
         <select
@@ -133,11 +133,11 @@ export default function TitlesPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Poster</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">TMDB ID</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">TMDB ID</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ano</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Áudio</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Tipo</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Ano</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Áudio</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">B2P</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P2B</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
@@ -170,16 +170,16 @@ export default function TitlesPage() {
                         <div className="w-9 h-14 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">?</div>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-xs text-zinc-500 font-mono">{t.tmdbId}</td>
+                    <td className="py-3 px-4 text-xs text-zinc-500 font-mono hidden sm:table-cell">{t.tmdbId}</td>
                     <td className="py-3 px-4">
                       <p className="font-medium text-sm">{t.title}</p>
                       {t.type === 'TV' && t.tvStatus && (
                         <div className="mt-1"><Badge status={t.tvStatus as any} /></div>
                       )}
                     </td>
-                    <td className="py-3 px-4"><Badge status={t.type as any} /></td>
-                    <td className="py-3 px-4 text-sm text-muted-foreground">{t.releaseYear || '—'}</td>
-                    <td className="py-3 px-4"><span className="text-xs text-zinc-400">{t.audioType === "DUBLADO_LEGENDADO" ? "Dub/Leg" : t.audioType === "LEGENDADO" ? "Leg" : t.audioType === "DUBLADO" ? "Dub" : "—"}</span></td>
+                    <td className="py-3 px-4 hidden sm:table-cell"><Badge status={t.type as any} /></td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground hidden sm:table-cell">{t.releaseYear || '—'}</td>
+                    <td className="py-3 px-4 hidden md:table-cell"><span className="text-xs text-zinc-400">{t.audioType === "DUBLADO_LEGENDADO" ? "Dub/Leg" : t.audioType === "LEGENDADO" ? "Leg" : t.audioType === "DUBLADO" ? "Dub" : "—"}</span></td>
                     <td className="py-3 px-4"><PBadge type="P1" active={t.hasP1} /></td>
                     <td className="py-3 px-4"><PBadge type="P2" active={t.hasP2} /></td>
                     <td className="py-3 px-4"><Badge status={t.internalStatus as any} /></td>
