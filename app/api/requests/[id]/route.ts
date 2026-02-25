@@ -3,10 +3,11 @@ import { prisma } from "@/lib/db"
 import { requireAuth } from "@/lib/rbac"
 import { z } from "zod"
 const UpdateSchema = z.object({
-  status: z.enum(["ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"]).optional(),
+  status: z.enum(["ABERTO", "EM_ANDAMENTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"]).optional(),
   notes: z.string().optional().nullable(),
   linkedTitleId: z.string().optional().nullable(),
   audioType: z.string().optional().nullable(),
+  seasonNumber: z.number().optional().nullable(),
 })
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const { error, session } = await requireAuth()

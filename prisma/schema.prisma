@@ -30,6 +30,7 @@ enum TvStatus {
 
 enum RequestStatus {
   ABERTO
+  EM_ANDAMENTO
   EM_PROGRESSO
   CONCLUIDO
   REJEITADO

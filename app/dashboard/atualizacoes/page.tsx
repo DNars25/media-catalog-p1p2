@@ -20,12 +20,14 @@ interface Update {
 
 const statusColor: Record<string, string> = {
   ABERTO: "bg-yellow-600",
+  EM_ANDAMENTO: "bg-blue-500",
   EM_PROGRESSO: "bg-blue-600",
   CONCLUIDO: "bg-green-600",
   REJEITADO: "bg-red-600",
 };
 const statusLabel: Record<string, string> = {
   ABERTO: "Aberto",
+  EM_ANDAMENTO: "Em Andamento",
   EM_PROGRESSO: "Em Progresso",
   CONCLUIDO: "Concluido",
   REJEITADO: "Rejeitado",
