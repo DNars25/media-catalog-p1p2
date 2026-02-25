@@ -22,7 +22,7 @@ async function getOpenRequests() {
       select: { id: true, requestedTitle: true, posterUrl: true, createdAt: true },
     }),
     prisma.request.findMany({
-      where: { type: 'TV', status: 'ABERTO' },
+      where: { type: 'TV', status: 'ABERTO', isUpdate: false },
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: { id: true, requestedTitle: true, posterUrl: true, createdAt: true },
