@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Sidebar } from '@/components/sidebar'
 import { BackgroundLayout } from '@/components/background-layout'
+import { IdleMonitor } from '@/components/idle-monitor'
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   if (session == null) redirect('/login')
@@ -13,6 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <BackgroundLayout />
         <div className="relative z-10">{children}</div>
       </main>
+      <IdleMonitor />
     </div>
   )
 }
