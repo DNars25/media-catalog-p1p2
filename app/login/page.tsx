@@ -48,7 +48,7 @@ export default function LoginPage() {
           </form>
         </div>
         <div className="mt-4 text-center">
-          <a href="/recepcao" className="w-full block font-medium py-3 rounded-lg text-white text-center transition-all" style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}>Recepção — Consultar Catálogo</a>
+          <a href="/vitrine" className="w-full block font-medium py-3 rounded-lg text-white text-center transition-all" style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}>Vitrine — Consultar Catálogo</a>
         </div>
       </div>
     </div>
