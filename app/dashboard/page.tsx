@@ -5,7 +5,7 @@ import Link from 'next/link'
 async function getStats() {
   const [totalTitles, openRequests, awaitingUpdate, movies, tvShows] = await Promise.all([
     prisma.title.count(),
-    prisma.request.count({ where: { status: 'ABERTO', isUpdate: false } }),
+    prisma.request.count({ where: { status: 'ABERTO', isUpdate: false, isCorrection: false } }),
     prisma.request.count({ where: { isUpdate: true, status: 'ABERTO' } }),
     prisma.title.count({ where: { type: 'MOVIE' } }),
     prisma.title.count({ where: { type: 'TV' } }),
@@ -16,13 +16,13 @@ async function getStats() {
 async function getOpenRequests() {
   const [movies, series] = await Promise.all([
     prisma.request.findMany({
-      where: { type: 'MOVIE', status: 'ABERTO' },
+      where: { type: 'MOVIE', status: 'ABERTO', isUpdate: false, isCorrection: false },
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: { id: true, requestedTitle: true, posterUrl: true, createdAt: true },
     }),
     prisma.request.findMany({
-      where: { type: 'TV', status: 'ABERTO', isUpdate: false },
+      where: { type: 'TV', status: 'ABERTO', isUpdate: false, isCorrection: false },
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: { id: true, requestedTitle: true, posterUrl: true, createdAt: true },

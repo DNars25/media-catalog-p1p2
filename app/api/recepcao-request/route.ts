@@ -5,8 +5,8 @@ const VALID_TYPES = ['MOVIE', 'TV']
 
 async function getSystemUserId(): Promise<string | null> {
   if (process.env.RECEPCAO_USER_ID) return process.env.RECEPCAO_USER_ID
-  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
-  return admin?.id ?? null
+  const user = await prisma.user.findFirst({ where: { name: 'Vitrine' }, select: { id: true } })
+  return user?.id ?? null
 }
 
 export async function POST(req: Request) {
