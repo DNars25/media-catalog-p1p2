@@ -103,7 +103,7 @@ export default function SettingsPage() {
             <p className="text-xs text-muted-foreground">Seu acervo digital, organizado.</p>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">Plataforma pessoal para catalogar e gerenciar filmes e séries armazenados nos servidores P1 e P2. Tudo num só lugar — busca rápida, controle de disponibilidade e histórico de pedidos.</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">Plataforma pessoal para catalogar e gerenciar filmes e séries armazenados nos servidores B2P e P2B. Tudo num só lugar — busca rápida, controle de disponibilidade e histórico de pedidos.</p>
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-2xl mb-1">🎥</p>
@@ -113,7 +113,7 @@ export default function SettingsPage() {
           <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-2xl mb-1">🖥️</p>
             <p className="text-xs font-medium">Servidores</p>
-            <p className="text-xs text-muted-foreground">P1 & P2</p>
+            <p className="text-xs text-muted-foreground">B2P & P2B</p>
           </div>
           <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-2xl mb-1">📋</p>

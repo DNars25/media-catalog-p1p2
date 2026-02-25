@@ -249,12 +249,13 @@ export default function NewTitlePage() {
             <div className='flex gap-4'>
               {(['P1', 'P2'] as const).map(p => {
                 const key = p === 'P1' ? 'hasP1' : 'hasP2'
+                const label = p === 'P1' ? 'B2P' : 'P2B'
                 return (
                   <label key={p} className='flex items-center gap-2 cursor-pointer'>
                     <div className={'w-10 h-6 rounded-full transition-colors cursor-pointer ' + ((form as any)[key] ? 'bg-primary' : 'bg-muted')} onClick={() => setForm({ ...form, [key]: (form as any)[key] === true ? false : true })}>
                       <div className={'w-4 h-4 rounded-full bg-white mt-1 transition-transform ' + ((form as any)[key] ? 'translate-x-5' : 'translate-x-1')} />
                     </div>
-                    <span className='text-sm font-semibold'>{p}</span>
+                    <span className='text-sm font-semibold'>{label}</span>
                   </label>
                 )
               })}

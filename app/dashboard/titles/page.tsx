@@ -110,10 +110,10 @@ export default function TitlesPage() {
         </select>
 
         <button onClick={() => { setFilterP1(filterP1 === "true" ? "" : "true"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterP1 === "true" ? "bg-orange-600 border-orange-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
-          Serv P1
+          Serv B2P
         </button>
         <button onClick={() => { setFilterP2(filterP2 === "true" ? "" : "true"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterP2 === "true" ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
-          Serv P2
+          Serv P2B
         </button>
         <button onClick={() => { setFilterAudio(filterAudio === "DUBLADO" ? "" : "DUBLADO"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterAudio === "DUBLADO" ? "bg-purple-600 border-purple-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
           Dublado
@@ -138,8 +138,8 @@ export default function TitlesPage() {
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ano</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Áudio</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P1</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P2</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">B2P</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">P2B</th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 {isAdmin && <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>}
               </tr>

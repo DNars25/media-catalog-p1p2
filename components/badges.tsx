@@ -25,6 +25,8 @@ export function Badge({ status }: { status: keyof typeof statusConfig }) {
   )
 }
 
+const serverDisplayName: Record<string, string> = { P1: 'B2P', P2: 'P2B' }
+
 export function PBadge({ type, active }: { type: 'P1' | 'P2'; active: boolean }) {
   return (
     <span className={cn(
@@ -33,7 +35,7 @@ export function PBadge({ type, active }: { type: 'P1' | 'P2'; active: boolean })
         ? 'bg-primary/10 text-primary border-primary/20'
         : 'bg-muted text-muted-foreground border-border opacity-40'
     )}>
-      {type}
+      {serverDisplayName[type] ?? type}
     </span>
   )
 }

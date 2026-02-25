@@ -347,7 +347,7 @@ export default function RequestsPage() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{r.preferredSystem || '—'}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">{{ P1: 'B2P', P2: 'P2B', AMBOS: 'Ambos' }[r.preferredSystem ?? ''] || r.preferredSystem || '—'}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{r.createdBy.name}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{formatDate(r.createdAt)}</td>
                   {isAdmin && (
@@ -433,8 +433,8 @@ export default function RequestsPage() {
                   <select value={form.preferredSystem} onChange={(e) => setForm({ ...form, preferredSystem: e.target.value })}
                     className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50">
                     <option value="">Sem preferência</option>
-                    <option value="P1">P1</option>
-                    <option value="P2">P2</option>
+                    <option value="P1">B2P</option>
+                    <option value="P2">P2B</option>
                     <option value="AMBOS">Ambos</option>
                   </select>
                 </div>

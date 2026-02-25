@@ -55,6 +55,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
           <div className="flex gap-4">
             {(['P1', 'P2'] as const).map((p) => {
               const key = p === 'P1' ? 'hasP1' : 'hasP2'
+              const label = p === 'P1' ? 'B2P' : 'P2B'
               return (
                 <label key={p} className="flex items-center gap-2 cursor-pointer">
                   <div
@@ -63,7 +64,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
                   >
                     <div className={`w-4 h-4 rounded-full bg-white mt-1 transition-transform ${form[key] ? 'translate-x-5' : 'translate-x-1'}`} />
                   </div>
-                  <span className="text-sm font-semibold">{p}</span>
+                  <span className="text-sm font-semibold">{label}</span>
                 </label>
               )
             })}
