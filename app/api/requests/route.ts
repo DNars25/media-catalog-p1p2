@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: any = { isCorrection: false }
   if (search) where.requestedTitle = { contains: search, mode: 'insensitive' }
   if (status) where.status = status
   if (type) where.type = type
