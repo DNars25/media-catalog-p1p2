@@ -75,35 +75,39 @@ function CorrectionCard({ c, isAdmin, userId, onStatusChange, onDelete }: {
 
   return (
     <div className='bg-card border border-border rounded-xl overflow-hidden'>
-      <div className='flex items-center gap-4 p-4 cursor-pointer hover:bg-secondary/20 transition' onClick={() => setOpen(o => !o)}>
+      <div className='flex items-start gap-3 p-4 cursor-pointer hover:bg-secondary/20 transition' onClick={() => setOpen(o => !o)}>
         {c.posterUrl
           ? <img src={c.posterUrl} alt={c.requestedTitle} className='w-10 h-14 object-cover rounded flex-shrink-0' />
           : <div className='w-10 h-14 bg-muted rounded flex-shrink-0 flex items-center justify-center'><Film className='w-4 h-4 text-muted-foreground' /></div>
         }
         <div className='flex-1 min-w-0'>
-          <div className='flex items-center gap-2 flex-wrap'>
-            <p className='font-semibold text-sm'>{c.requestedTitle}</p>
-            <span className='text-xs text-muted-foreground'>{c.type === 'MOVIE' ? 'Filme' : 'Série'}</span>
-            {serverDisplay && (
-              <span className='text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-medium'>
-                {serverDisplay}
-              </span>
-            )}
+          <div className='flex items-start justify-between gap-2'>
+            <div className='min-w-0'>
+              <div className='flex items-center gap-2 flex-wrap'>
+                <p className='font-semibold text-sm'>{c.requestedTitle}</p>
+                <span className='text-xs text-muted-foreground'>{c.type === 'MOVIE' ? 'Filme' : 'Série'}</span>
+                {serverDisplay && (
+                  <span className='text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-medium'>
+                    {serverDisplay}
+                  </span>
+                )}
+              </div>
+              {parsed.problem && <p className='text-xs text-muted-foreground mt-0.5 line-clamp-2'>{parsed.problem}</p>}
+              {c.type === 'TV' && (c.seasonNumber || parsed.season) && (
+                <p className='text-xs text-muted-foreground'>
+                  Temp {c.seasonNumber || parsed.season}
+                  {parsed.episodes ? ` · Eps ${parsed.episodes}` : ''}
+                </p>
+              )}
+              <p className='text-xs text-muted-foreground/60 mt-0.5'>
+                {new Date(c.createdAt).toLocaleDateString('pt-BR')} · {c.createdBy.name}
+              </p>
+            </div>
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex-shrink-0 ${statusColor[c.status] || 'bg-muted text-muted-foreground border-border'}`}>
+              {statusLabel[c.status] || c.status}
+            </span>
           </div>
-          {parsed.problem && <p className='text-xs text-muted-foreground mt-0.5 line-clamp-1'>{parsed.problem}</p>}
-          {c.type === 'TV' && (c.seasonNumber || parsed.season) && (
-            <p className='text-xs text-muted-foreground'>
-              Temp {c.seasonNumber || parsed.season}
-              {parsed.episodes ? ` · Eps ${parsed.episodes}` : ''}
-            </p>
-          )}
-          <p className='text-xs text-muted-foreground/60 mt-0.5'>
-            {new Date(c.createdAt).toLocaleDateString('pt-BR')} · {c.createdBy.name}
-          </p>
         </div>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border flex-shrink-0 ${statusColor[c.status] || 'bg-muted text-muted-foreground border-border'}`}>
-          {statusLabel[c.status] || c.status}
-        </span>
       </div>
 
       {open && (
@@ -218,10 +222,10 @@ export default function CorrecoesPage() {
   const filters = ['', 'ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']
 
   return (
-    <div className='p-6'>
+    <div className='p-4 sm:p-6'>
       <div className='mb-6'>
         <h1 className='text-2xl font-bold flex items-center gap-2'>
-          <AlertTriangle className='w-6 h-6 text-red-400' />
+          <AlertTriangle className='w-5 h-5 sm:w-6 sm:h-6 text-red-400' />
           Correções
         </h1>
         <p className='text-muted-foreground text-sm mt-1'>Problemas reportados pelos usuários via Vitrine</p>
