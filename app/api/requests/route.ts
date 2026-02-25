@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
+import { findRequestIdsByText } from '@/lib/search'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -15,7 +16,10 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit
 
   const where: any = { isCorrection: false }
-  if (search) where.requestedTitle = { contains: search, mode: 'insensitive' }
+  if (search) {
+    const ids = await findRequestIdsByText(search)
+    where.id = { in: ids }
+  }
   if (status) where.status = status
   if (type) where.type = type
   const isUpdate = sp.get("isUpdate")

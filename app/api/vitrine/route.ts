@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { findTitleIdsByTextAndType } from '@/lib/search'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -18,13 +19,12 @@ export async function GET(req: Request) {
 
   const tmdbIds = (tmdbRes.results || []).map((r: any) => r.id)
 
+  const localTextIds = await findTitleIdsByTextAndType(query, localType)
   const local = await prisma.title.findMany({
     where: {
       type: localType,
       OR: [
-        { title: { contains: query, mode: 'insensitive' } },
-        { title: { contains: query.replace(/&/g, 'e'), mode: 'insensitive' } },
-        { title: { contains: query.replace(/e/g, '&'), mode: 'insensitive' } },
+        ...(localTextIds.length > 0 ? [{ id: { in: localTextIds } }] : []),
         { tmdbId: { in: tmdbIds } },
       ],
     },

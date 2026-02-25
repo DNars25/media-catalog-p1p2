@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAdmin, requireAuth } from '@/lib/rbac'
 import { TitleCreateSchema } from '@/lib/validators'
+import { findTitleIdsByText } from '@/lib/search'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -20,10 +21,8 @@ export async function GET(req: NextRequest) {
 
   const where: any = {}
   if (search) {
-    where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      { overview: { contains: search, mode: 'insensitive' } },
-    ]
+    const ids = await findTitleIdsByText(search)
+    where.id = { in: ids }
   }
   if (type) where.type = type
   if (p1 === 'true') where.hasP1 = true
