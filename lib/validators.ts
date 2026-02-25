@@ -34,6 +34,11 @@ export const RequestCreateSchema = z.object({
   tmdbId: z.number().int().optional().nullable(),
   notes: z.string().optional().nullable(),
   preferredSystem: z.enum(['P1', 'P2', 'AMBOS']).optional().nullable(),
+  posterUrl: z.string().url().optional().nullable(),
+  isUpdate: z.boolean().default(false),
+  seasonNumber: z.number().int().optional().nullable(),
+  audioType: z.string().optional().nullable(),
+  linkedTitleId: z.string().uuid().optional().nullable(),
 })
 
 export const RequestUpdateSchema = z.object({

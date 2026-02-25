@@ -31,8 +31,7 @@ export async function POST(req: Request) {
     })
 
     return NextResponse.json({ ok: true, id: request.id })
-  } catch (err) {
-    console.error('Erro ao criar solicitacao:', err)
+  } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

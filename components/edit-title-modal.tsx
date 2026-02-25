@@ -4,8 +4,20 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2 } from 'lucide-react'
 
+interface TitleForModal {
+  id: string
+  title: string
+  type: 'MOVIE' | 'TV'
+  hasP1: boolean
+  hasP2: boolean
+  internalStatus: string
+  tvStatus: string | null
+  tvSeasons: number | null
+  tvEpisodes: number | null
+}
+
 interface EditTitleModalProps {
-  title: any
+  title: TitleForModal
   onClose: () => void
   onSaved: () => void
 }

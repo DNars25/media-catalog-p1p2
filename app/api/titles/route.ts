@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAdmin, requireAuth } from '@/lib/rbac'
 import { TitleCreateSchema } from '@/lib/validators'
 import { findTitleIdsByText } from '@/lib/search'
+import { Prisma, TitleType, InternalStatus, TvStatus } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -19,22 +20,22 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
-  const where: any = {}
+  const where: Prisma.TitleWhereInput = {}
   if (search) {
     const ids = await findTitleIdsByText(search)
     where.id = { in: ids }
   }
-  if (type) where.type = type
+  if (type) where.type = type as TitleType
   if (p1 === 'true') where.hasP1 = true
   if (p1 === 'false') where.hasP1 = false
   if (p2 === 'true') where.hasP2 = true
   if (p2 === 'false') where.hasP2 = false
   const audioType = sp.get('audioType')
   if (audioType) where.audioType = audioType
-  if (internalStatus) where.internalStatus = internalStatus
-  if (tvStatus) where.tvStatus = tvStatus
+  if (internalStatus) where.internalStatus = internalStatus as InternalStatus
+  if (tvStatus) where.tvStatus = tvStatus as TvStatus
   const tmdbIdParam = sp.get('tmdbId')
-  if (tmdbIdParam) where.tmdbId = parseInt(tmdbIdParam)
+  if (tmdbIdParam && !isNaN(Number(tmdbIdParam))) where.tmdbId = parseInt(tmdbIdParam, 10)
 
   const [total, titles] = await Promise.all([
     prisma.title.count({ where }),

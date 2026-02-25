@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
 import { findRequestIdsByText } from '@/lib/search'
+import { RequestCreateSchema } from '@/lib/validators'
+import { Prisma, RequestStatus } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -15,13 +17,13 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
-  const where: any = { isCorrection: false }
+  const where: Prisma.RequestWhereInput = { isCorrection: false }
   if (search) {
     const ids = await findRequestIdsByText(search)
     where.id = { in: ids }
   }
-  if (status) where.status = status
-  if (type) where.type = type
+  if (status) where.status = status as RequestStatus
+  if (type) where.type = type as Prisma.EnumTitleTypeFilter
   const isUpdate = sp.get("isUpdate")
   if (isUpdate === "true") where.isUpdate = true
   if (isUpdate === "false") where.isUpdate = false
@@ -48,22 +50,23 @@ export async function POST(req: NextRequest) {
   if (error) return error
 
   const body = await req.json()
-  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId } = body
+  const parsed = RequestCreateSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  if (!requestedTitle) return NextResponse.json({ error: 'Título obrigatório' }, { status: 400 })
+  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId } = parsed.data
 
   const request = await prisma.request.create({
     data: {
       requestedTitle,
-      type: type || 'MOVIE',
-      notes: notes || null,
-      preferredSystem: preferredSystem || null,
-      tmdbId: tmdbId || null,
-      posterUrl: posterUrl || null,
-      isUpdate: isUpdate || false,
-      seasonNumber: seasonNumber || null,
-      audioType: audioType || null,
-      linkedTitleId: linkedTitleId || null,
+      type,
+      notes: notes ?? null,
+      preferredSystem: preferredSystem ?? null,
+      tmdbId: tmdbId ?? null,
+      posterUrl: posterUrl ?? null,
+      isUpdate,
+      seasonNumber: seasonNumber ?? null,
+      audioType: audioType ?? null,
+      linkedTitleId: linkedTitleId ?? null,
       createdById: session!.user.id,
     },
   })

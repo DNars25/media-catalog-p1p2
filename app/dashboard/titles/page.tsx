@@ -12,7 +12,7 @@ import { EditTitleModal } from '@/components/edit-title-modal'
 interface Title {
   id: string
   title: string
-  type: string
+  type: 'MOVIE' | 'TV'
   releaseYear: number | null
   posterUrl: string | null
   hasP1: boolean

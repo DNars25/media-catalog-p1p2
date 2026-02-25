@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   for (const t of titles) {
     try {
       const tmdb = await getTMDBDetails('tv', t.tmdbId)
-      const seasons: { season_number: number; episode_count: number }[] = tmdb.seasons ?? []
+      const seasons: { season_number: number; episode_count: number }[] = tmdb.type === 'TV' ? tmdb.seasons : []
       const validSeasons = seasons.filter(s => s.season_number > 0 && s.episode_count > 0)
 
       if (validSeasons.length === 0) {

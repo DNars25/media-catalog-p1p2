@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireAdmin } from '@/lib/rbac'
+import { Prisma, TitleType, PreferredSystem, RequestStatus } from '@prisma/client'
 
 async function getSystemUserId(): Promise<string | null> {
   if (process.env.RECEPCAO_USER_ID) return process.env.RECEPCAO_USER_ID
@@ -19,8 +20,8 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
-  const where: any = { isCorrection: true }
-  if (status) where.status = status
+  const where: Prisma.RequestWhereInput = { isCorrection: true }
+  if (status) where.status = status as RequestStatus
 
   const [total, corrections] = await Promise.all([
     prisma.request.count({ where }),
@@ -67,14 +68,14 @@ export async function POST(req: Request) {
     }
 
     // Resolve preferredSystem para o enum do banco (P1/P2/AMBOS)
-    const systemMap: Record<string, string> = { B2P: 'P1', P2B: 'P2', Ambos: 'AMBOS' }
-    const preferredSystem = server ? (systemMap[server] || null) : null
+    const systemMap: Record<string, PreferredSystem> = { B2P: 'P1', P2B: 'P2', Ambos: 'AMBOS' }
+    const preferredSystem: PreferredSystem | null = server ? (systemMap[server] ?? null) : null
 
     // Tenta linkar ao título existente no catálogo
     let linkedTitleId: string | null = null
     if (tmdbId) {
-      const existing = await prisma.title.findFirst({
-        where: { tmdbId: parseInt(tmdbId), type: type as any },
+      const existing = await prisma.title.findUnique({
+        where: { tmdbId_type: { tmdbId: parseInt(tmdbId), type: type as TitleType } },
         select: { id: true },
       })
       if (existing) linkedTitleId = existing.id
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
     const correction = await prisma.request.create({
       data: {
         requestedTitle: title,
-        type: type as any,
+        type: type as TitleType,
         tmdbId: tmdbId ? parseInt(tmdbId) : null,
         posterUrl: posterUrl || null,
         requestedBy: 'Vitrine',
@@ -92,15 +93,14 @@ export async function POST(req: Request) {
         isCorrection: true,
         notes: fullNotes,
         seasonNumber: seasonNumber ? parseInt(seasonNumber) : null,
-        preferredSystem: preferredSystem as any,
+        preferredSystem,
         linkedTitleId,
         createdById: systemUserId,
       },
     })
 
     return NextResponse.json({ ok: true, id: correction.id })
-  } catch (err) {
-    console.error('Erro ao criar correção:', err)
+  } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

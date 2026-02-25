@@ -31,7 +31,14 @@ async function getOpenRequests() {
   return { movies, series }
 }
 
-function RequestCard({ r, href, barColor }: { r: any; href: string; barColor: string }) {
+interface DashboardRequest {
+  id: string
+  requestedTitle: string
+  posterUrl: string | null
+  createdAt: Date
+}
+
+function RequestCard({ r, href, barColor }: { r: DashboardRequest; href: string; barColor: string }) {
   const date = new Date(r.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
   return (
     <Link href={href} className="group block w-[150px] flex-shrink-0">

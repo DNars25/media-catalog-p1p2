@@ -83,6 +83,7 @@ model Title {
 
   @@unique([tmdbId, type])
   @@index([title])
+  @@index([tmdbId])
   @@index([hasP1])
   @@index([hasP2])
   @@index([internalStatus])
@@ -123,6 +124,9 @@ model Request {
 
   @@index([status])
   @@index([createdAt])
+  @@index([createdById])
+  @@index([linkedTitleId])
+  @@index([type, status])
 }
 
 model AuditLog {
