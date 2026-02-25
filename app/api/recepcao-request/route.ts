@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-const SYSTEM_USER_ID = process.env.RECEPCAO_USER_ID
 const VALID_TYPES = ['MOVIE', 'TV']
+
+async function getSystemUserId(): Promise<string | null> {
+  if (process.env.RECEPCAO_USER_ID) return process.env.RECEPCAO_USER_ID
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
+  return admin?.id ?? null
+}
 
 export async function POST(req: Request) {
   try {
@@ -10,17 +15,18 @@ export async function POST(req: Request) {
     const { title, type, posterUrl } = body
     if (VALID_TYPES.includes(type) === false) return NextResponse.json({ error: 'Tipo invalido' }, { status: 400 })
 
-    if (!SYSTEM_USER_ID) return NextResponse.json({ error: 'Servico indisponivel' }, { status: 503 })
+    const systemUserId = await getSystemUserId()
+    if (!systemUserId) return NextResponse.json({ error: 'Servico indisponivel' }, { status: 503 })
 
     const request = await prisma.request.create({
       data: {
         requestedTitle: title,
         type: type,
         posterUrl: posterUrl || null,
-        requestedBy: 'Recepcao',
+        requestedBy: 'Vitrine',
         status: 'ABERTO',
         isUpdate: false,
-        createdById: SYSTEM_USER_ID
+        createdById: systemUserId
       }
     })
 

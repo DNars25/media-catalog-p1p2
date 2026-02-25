@@ -60,6 +60,7 @@ function CorrectForm({
   const [season, setSeason] = useState('')
   const [episodes, setEpisodes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   // Only show servers that the title actually has
   const servers: ('B2P' | 'P2B')[] = []
@@ -69,22 +70,28 @@ function CorrectForm({
 
   async function handleSubmit() {
     setLoading(true)
-    await fetch('/api/correcoes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: item.title,
-        tmdbId: item.tmdbId,
-        posterUrl: item.posterUrl,
-        type,
-        server,
-        notes: 'Offline',
-        seasonNumber: season || null,
-        episodeNotes: episodes || null,
-      }),
-    })
-    setLoading(false)
-    onSent()
+    try {
+      const res = await fetch('/api/correcoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title,
+          tmdbId: item.tmdbId,
+          posterUrl: item.posterUrl,
+          type,
+          server,
+          notes: 'Offline',
+          seasonNumber: season || null,
+          episodeNotes: episodes || null,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      onSent()
+    } catch {
+      setError('Erro ao enviar. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -133,6 +140,8 @@ function CorrectForm({
           </div>
         </div>
       )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
         <button
@@ -197,6 +206,8 @@ export default function VitrinePage() {
     if (res.ok) {
       setRequested(prev => [...prev, item.tmdbId])
       setFeedback('Pedido enviado com sucesso!')
+    } else {
+      setFeedback('Erro ao enviar pedido. Tente novamente.')
     }
   }
 

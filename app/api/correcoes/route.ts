@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireAdmin } from '@/lib/rbac'
 
-const SYSTEM_USER_ID = process.env.RECEPCAO_USER_ID
+async function getSystemUserId(): Promise<string | null> {
+  if (process.env.RECEPCAO_USER_ID) return process.env.RECEPCAO_USER_ID
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
+  return admin?.id ?? null
+}
 
 // GET — lista correções (requer autenticação)
 export async function GET(req: NextRequest) {
@@ -49,7 +53,8 @@ export async function POST(req: Request) {
     if (!title || !notes) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
     }
-    if (!SYSTEM_USER_ID) {
+    const systemUserId = await getSystemUserId()
+    if (!systemUserId) {
       return NextResponse.json({ error: 'Serviço indisponível' }, { status: 503 })
     }
 
@@ -89,7 +94,7 @@ export async function POST(req: Request) {
         seasonNumber: seasonNumber ? parseInt(seasonNumber) : null,
         preferredSystem: preferredSystem as any,
         linkedTitleId,
-        createdById: SYSTEM_USER_ID,
+        createdById: systemUserId,
       },
     })
 
