@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { AlertTriangle, Film } from 'lucide-react'
+import { AlertTriangle, Film, Trash2 } from 'lucide-react'
 
 interface Correction {
   id: string
@@ -14,6 +14,7 @@ interface Correction {
   seasonNumber: number | null
   status: string
   createdAt: string
+  createdById: string
   createdBy: { name: string; email: string }
 }
 
@@ -52,11 +53,19 @@ function parseNotes(notes: string | null) {
   }
 }
 
-function CorrectionCard({ c, onStatusChange }: { c: Correction; onStatusChange: (id: string, status: string) => void }) {
+function CorrectionCard({ c, isAdmin, userId, onStatusChange, onDelete }: {
+  c: Correction
+  isAdmin: boolean
+  userId: string
+  onStatusChange: (id: string, status: string) => void
+  onDelete: (id: string) => void
+}) {
   const [open, setOpen] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const parsed = parseNotes(c.notes)
   const serverDisplay = c.preferredSystem ? (serverLabel[c.preferredSystem] || c.preferredSystem) : parsed.server
+  const canDelete = isAdmin || c.createdById === userId
 
   async function handleStatus(status: string) {
     setUpdating(true)
@@ -105,21 +114,53 @@ function CorrectionCard({ c, onStatusChange }: { c: Correction; onStatusChange: 
               <p className='text-sm'>{parsed.problem}</p>
             </div>
           )}
-          <div>
-            <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>Alterar Status</p>
-            <div className='flex gap-2 flex-wrap'>
-              {['ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO'].map(s => (
-                <button
-                  key={s}
-                  onClick={() => handleStatus(s)}
-                  disabled={updating || c.status === s}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border disabled:opacity-40 ${c.status === s ? statusColor[s] : 'border-border text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
-                >
-                  {statusLabel[s]}
-                </button>
-              ))}
+
+          {isAdmin && (
+            <div>
+              <p className='text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>Alterar Status</p>
+              <div className='flex gap-2 flex-wrap'>
+                {['ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO'].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => handleStatus(s)}
+                    disabled={updating || c.status === s}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border disabled:opacity-40 ${c.status === s ? statusColor[s] : 'border-border text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+                  >
+                    {statusLabel[s]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {canDelete && (
+            <div className='flex justify-end pt-1'>
+              {confirmDelete ? (
+                <div className='flex items-center gap-2'>
+                  <span className='text-xs text-muted-foreground'>Confirmar exclusão?</span>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className='px-3 py-1.5 rounded-lg text-xs border border-border text-muted-foreground hover:bg-secondary transition'
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => onDelete(c.id)}
+                    className='px-3 py-1.5 rounded-lg text-xs bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive/30 transition font-medium'
+                  >
+                    Excluir
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
+                  className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition'
+                >
+                  <Trash2 className='w-3.5 h-3.5' /> Excluir
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -128,6 +169,8 @@ function CorrectionCard({ c, onStatusChange }: { c: Correction; onStatusChange: 
 
 export default function CorrecoesPage() {
   const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'ADMIN'
+  const userId = session?.user?.id || ''
   const [corrections, setCorrections] = useState<Correction[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState('')
@@ -158,6 +201,17 @@ export default function CorrecoesPage() {
       fetchCorrections()
     } catch {
       toast.error('Erro ao atualizar status')
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      const res = await fetch('/api/requests/' + id, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('Correção excluída!')
+      fetchCorrections()
+    } catch {
+      toast.error('Erro ao excluir')
     }
   }
 
@@ -195,7 +249,7 @@ export default function CorrecoesPage() {
       ) : (
         <div className='space-y-3'>
           {corrections.map(c => (
-            <CorrectionCard key={c.id} c={c} onStatusChange={handleStatusChange} />
+            <CorrectionCard key={c.id} c={c} isAdmin={isAdmin} userId={userId} onStatusChange={handleStatusChange} onDelete={handleDelete} />
           ))}
         </div>
       )}
