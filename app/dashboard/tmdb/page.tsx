@@ -75,16 +75,16 @@ export default function TmdbPage() {
   const downloadJson = () => {
     if (!selected) return
     const payload = {
+      actor: "",
       name: selected.name,
       description: selected.description,
-      logo: selected.logo,
-      actor: selected.actor,
+      logo: "imagem.jpg",
     }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${selected.name.replace(/[^a-z0-9]/gi, '_')}_data.json`
+    a.download = 'data.json'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -97,7 +97,7 @@ export default function TmdbPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${selected.name.replace(/[^a-z0-9]/gi, '_')}_cover.jpg`
+    a.download = 'imagem.jpeg'
     a.click()
     URL.revokeObjectURL(url)
     setDownloadingCover(false)
