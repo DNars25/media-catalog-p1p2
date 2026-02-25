@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-const SYSTEM_USER_ID = '97a1f24d-5035-4781-b11d-ebca229d8618'
+const SYSTEM_USER_ID = process.env.RECEPCAO_USER_ID
 const VALID_TYPES = ['MOVIE', 'TV']
 
 export async function POST(req: Request) {
@@ -9,6 +9,8 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { title, type, posterUrl } = body
     if (VALID_TYPES.includes(type) === false) return NextResponse.json({ error: 'Tipo invalido' }, { status: 400 })
+
+    if (!SYSTEM_USER_ID) return NextResponse.json({ error: 'Servico indisponivel' }, { status: 503 })
 
     const request = await prisma.request.create({
       data: {

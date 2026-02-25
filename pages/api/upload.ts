@@ -27,8 +27,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ext = (file.mimetype || 'image/png').split('/')[1].replace('jpeg', 'jpg');
     const filename = 'avatars/' + uid + '-' + Date.now() + '.' + ext;
     const fileBuffer = fs.readFileSync(file.filepath);
-    const blob = await put(filename, fileBuffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
-    await prisma.user.update({ where: { id: uid }, data: { image: blob.url } });
-    return res.json({ url: blob.url });
+    try {
+      const blob = await put(filename, fileBuffer, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
+      await prisma.user.update({ where: { id: uid }, data: { image: blob.url } });
+      return res.json({ url: blob.url });
+    } catch {
+      return res.status(500).json({ error: 'Erro ao salvar arquivo' });
+    }
   });
 }

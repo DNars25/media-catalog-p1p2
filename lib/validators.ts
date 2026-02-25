@@ -27,9 +27,11 @@ export const RequestCreateSchema = z.object({
 })
 
 export const RequestUpdateSchema = z.object({
-  status: z.enum(['ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']).optional(),
+  status: z.enum(['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']).optional(),
   notes: z.string().optional().nullable(),
   linkedTitleId: z.string().uuid().optional().nullable(),
+  audioType: z.string().optional().nullable(),
+  seasonNumber: z.number().int().optional().nullable(),
 })
 
 export const UserCreateSchema = z.object({

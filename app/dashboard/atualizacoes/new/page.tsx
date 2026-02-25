@@ -31,7 +31,7 @@ export default function NovaAtualizacaoPage() {
     if (!search.trim()) return;
     setSearching(true);
     try {
-      const res = await fetch("/api/tmdb/search?q=" + encodeURIComponent(search) + "&type=TV");
+      const res = await fetch("/api/tmdb/search?query=" + encodeURIComponent(search) + "&type=TV");
       const d = await res.json();
       setResults(Array.isArray(d) ? d : (d.results || []));
     } catch {
