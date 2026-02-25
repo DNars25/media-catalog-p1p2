@@ -97,7 +97,7 @@ export default function TmdbPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'imagem.jpeg'
+    a.download = 'imagem.jpg'
     a.click()
     URL.revokeObjectURL(url)
     setDownloadingCover(false)
