@@ -2,12 +2,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import {
-  BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts'
+import dynamic from 'next/dynamic'
 import { BarChart2, Download, Loader2, TrendingUp, AlertTriangle, RefreshCw, Film } from 'lucide-react'
 import type { AnalyticsData, Period } from '@/lib/analytics'
+
+const UserBarChart = dynamic(
+  () => import('./analytics-charts').then(m => m.UserBarChart),
+  { ssr: false, loading: () => <div className='h-[280px] flex items-center justify-center text-muted-foreground text-sm'>Carregando gráfico...</div> }
+)
+const MonthlyLineChart = dynamic(
+  () => import('./analytics-charts').then(m => m.MonthlyLineChart),
+  { ssr: false, loading: () => <div className='h-[280px] flex items-center justify-center text-muted-foreground text-sm'>Carregando gráfico...</div> }
+)
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: '30d', label: '30 dias' },
@@ -15,13 +21,6 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: '1y', label: '1 ano' },
   { value: 'all', label: 'Tudo' },
 ]
-
-const COLORS = {
-  requests: '#3b82f6',
-  corrections: '#ef4444',
-  updates: '#a855f7',
-  titles: '#22c55e',
-}
 
 function pct(done: number, total: number) {
   if (!total) return '0'
@@ -178,29 +177,7 @@ export default function AnalyticsPage() {
           {data.byUser.length > 0 && (
             <div className='bg-card border border-border rounded-xl p-5'>
               <h2 className='font-semibold mb-4'>Atividade por Usuário</h2>
-              <ResponsiveContainer width='100%' height={280}>
-                <BarChart data={data.byUser} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray='3 3' stroke='hsl(var(--border))' />
-                  <XAxis
-                    dataKey='userName'
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--foreground))',
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey='requests' name='Pedidos' fill={COLORS.requests} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey='corrections' name='Correções' fill={COLORS.corrections} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey='updates' name='Atualizações' fill={COLORS.updates} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey='titles' name='Títulos' fill={COLORS.titles} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <UserBarChart data={data.byUser} />
             </div>
           )}
 
@@ -208,29 +185,7 @@ export default function AnalyticsPage() {
           {data.monthly.length > 1 && (
             <div className='bg-card border border-border rounded-xl p-5'>
               <h2 className='font-semibold mb-4'>Evolução Mensal</h2>
-              <ResponsiveContainer width='100%' height={280}>
-                <LineChart data={data.monthly} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray='3 3' stroke='hsl(var(--border))' />
-                  <XAxis
-                    dataKey='month'
-                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      color: 'hsl(var(--foreground))',
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type='monotone' dataKey='requests' name='Pedidos' stroke={COLORS.requests} strokeWidth={2} dot={false} />
-                  <Line type='monotone' dataKey='corrections' name='Correções' stroke={COLORS.corrections} strokeWidth={2} dot={false} />
-                  <Line type='monotone' dataKey='updates' name='Atualizações' stroke={COLORS.updates} strokeWidth={2} dot={false} />
-                  <Line type='monotone' dataKey='titles' name='Títulos' stroke={COLORS.titles} strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+              <MonthlyLineChart data={data.monthly} />
             </div>
           )}
 

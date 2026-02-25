@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ['recharts'],
   webpack: (config) => {
     config.externals.push({ undici: "undici" });
     return config;
