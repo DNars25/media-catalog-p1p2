@@ -465,7 +465,8 @@ function SerieModal({
   const epLine = noteLines.find(l => /^Temp\s/i.test(l.trim())) ?? null
   const obsLine = noteLines.filter(l => !/^Temp\s/i.test(l.trim()) && l.trim()).join(' ') || null
 
-  const isIncompleta = serie.tvStatus === 'FINALIZADA'
+  const isConcluida = serie.latestRequest?.status === 'CONCLUIDO'
+  const isIncompleta = serie.tvStatus === 'FINALIZADA' && !isConcluida
 
   return (
     <div
@@ -489,7 +490,11 @@ function SerieModal({
               {serie.tvSeasons && (
                 <p className="text-zinc-500 text-xs">{serie.tvSeasons} temporada{serie.tvSeasons !== 1 ? 's' : ''}</p>
               )}
-              {isIncompleta ? (
+              {isConcluida ? (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-900/50 text-green-400 border border-green-700/50">
+                  Completa
+                </span>
+              ) : isIncompleta ? (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/50 text-amber-400 border border-amber-700/50">
                   Incompleta
                 </span>
@@ -752,13 +757,15 @@ const FILTERS = [
   { key: '', label: 'Todas' },
   { key: 'EM_ANDAMENTO', label: 'Em Andamento' },
   { key: 'INCOMPLETAS', label: 'Incompletas' },
+  { key: 'CONCLUIDOS', label: 'Concluídos' },
   { key: 'SEM_PEDIDO', label: 'Sem Pedido' },
 ]
 
 const filterDesc: Record<string, string> = {
   '': 'séries em andamento e incompletas',
   EM_ANDAMENTO: 'séries em andamento',
-  INCOMPLETAS: 'séries incompletas (finalizadas no TMDB)',
+  INCOMPLETAS: 'séries incompletas',
+  CONCLUIDOS: 'séries concluídas no servidor',
   SEM_PEDIDO: 'séries sem pedido de atualização',
 }
 
@@ -842,7 +849,8 @@ export default function AtualizacoesPage() {
       ) : (
         <div className="space-y-2">
           {series.map(s => {
-            const isIncompleta = s.tvStatus === 'FINALIZADA'
+            const isConcluida = s.latestRequest?.status === 'CONCLUIDO'
+            const isIncompleta = s.tvStatus === 'FINALIZADA' && !isConcluida
             return (
               <div
                 key={s.id}
@@ -857,7 +865,11 @@ export default function AtualizacoesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-white font-semibold">{s.title}</p>
-                    {isIncompleta ? (
+                    {isConcluida ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-900/50 text-green-400 border border-green-700/50 shrink-0">
+                        Completa
+                      </span>
+                    ) : isIncompleta ? (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-900/50 text-amber-400 border border-amber-700/50 shrink-0">
                         Incompleta
                       </span>

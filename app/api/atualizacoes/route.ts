@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
-import { Prisma } from '@prisma/client'
+import { Prisma, RequestStatus } from '@prisma/client'
 
+// Séries FINALIZADA no TMDB com episódios faltando E sem pedido CONCLUIDO
 async function getIncompleteIds(): Promise<string[]> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT t.id FROM "Title" t
@@ -14,6 +15,12 @@ async function getIncompleteIds(): Promise<string[]> {
     AND (
       (t."tvEpisodes" IS NOT NULL AND t."tvEpisodes" > 0 AND COALESCE(e.cnt, 0) < t."tvEpisodes")
       OR COALESCE(e.cnt, 0) = 0
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM "Request" r
+      WHERE r."linkedTitleId" = t.id
+      AND r."isUpdate" = true
+      AND r.status = 'CONCLUIDO'
     )
   `
   return rows.map(r => r.id)
@@ -31,6 +38,7 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit
 
   const isSemPedido = statusFilter === 'SEM_PEDIDO'
+  const isConcluidos = statusFilter === 'CONCLUIDOS'
   const needsIncomplete = !statusFilter || statusFilter === 'INCOMPLETAS' || isSemPedido
 
   const incompleteIds = needsIncomplete ? await getIncompleteIds() : []
@@ -51,8 +59,11 @@ export async function GET(req: NextRequest) {
     conditions.push({ tvStatus: 'EM_ANDAMENTO' })
   } else if (statusFilter === 'INCOMPLETAS') {
     conditions.push({ id: { in: incompleteIds } })
+  } else if (isConcluidos) {
+    // Séries com pelo menos um pedido isUpdate CONCLUIDO
+    conditions.push({ requests: { some: { isUpdate: true, status: 'CONCLUIDO' as RequestStatus } } })
   } else {
-    // Default ou SEM_PEDIDO: EM_ANDAMENTO + INCOMPLETAS
+    // Default ou SEM_PEDIDO: EM_ANDAMENTO + INCOMPLETAS (sem CONCLUIDOS)
     conditions.push({ OR: [{ tvStatus: 'EM_ANDAMENTO' }, { id: { in: incompleteIds } }] })
   }
 
