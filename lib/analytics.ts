@@ -140,16 +140,16 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
              count(*)::int as cnt
       FROM "Request"
       WHERE created_at >= ${chartSince}
-      GROUP BY ym, is_correction, is_update
-      ORDER BY ym
+      GROUP BY to_char(created_at, 'YYYY-MM'), is_correction, is_update
+      ORDER BY to_char(created_at, 'YYYY-MM')
     `),
     prisma.$queryRaw<RawMonthTitleRow[]>(Prisma.sql`
       SELECT to_char(created_at, 'YYYY-MM') as ym,
              count(*)::int as cnt
       FROM "Title"
       WHERE created_at >= ${chartSince}
-      GROUP BY ym
-      ORDER BY ym
+      GROUP BY to_char(created_at, 'YYYY-MM')
+      ORDER BY to_char(created_at, 'YYYY-MM')
     `),
   ])
 
