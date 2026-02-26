@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { logAudit } from '@/lib/audit'
+import { sendPublicRequestCreated } from '@/lib/email'
 
 const VALID_TYPES = ['MOVIE', 'TV']
 
@@ -28,6 +30,16 @@ export async function POST(req: Request) {
         isUpdate: false,
         createdById: systemUserId
       }
+    })
+
+    logAudit({ entityType: 'Request', entityId: request.id, action: 'CREATE_PUBLIC', userId: systemUserId, after: request })
+
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } })
+    sendPublicRequestCreated({
+      adminEmails: admins.map(a => a.email),
+      requestTitle: title,
+      source: 'Vitrine',
+      type,
     })
 
     return NextResponse.json({ ok: true, id: request.id })

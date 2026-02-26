@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/rbac'
 import { UserCreateSchema } from '@/lib/validators'
 import bcrypt from 'bcryptjs'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin()
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { error } = await requireAdmin()
+  const { error, session } = await requireAdmin()
   if (error) return error
 
   const body = await req.json()
@@ -41,6 +42,8 @@ export async function POST(req: NextRequest) {
     data: { name: parsed.data.name, email: parsed.data.email, passwordHash, role: parsed.data.role },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
   })
+
+  logAudit({ entityType: 'User', entityId: user.id, action: 'CREATE', userId: session!.user.id, after: user })
 
   return NextResponse.json(user, { status: 201 })
 }

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
-import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database, BarChart2 } from 'lucide-react'
+import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database, BarChart2, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -19,6 +19,7 @@ const navItems = [
 const adminItems = [
   { href: '/dashboard/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/dashboard/users', icon: Users, label: 'Usuários' },
+  { href: '/dashboard/admin/audit', icon: ClipboardCheck, label: 'Audit Log' },
   { href: '/dashboard/settings', icon: Settings, label: 'Configurações' },
 ]
 export function Sidebar() {

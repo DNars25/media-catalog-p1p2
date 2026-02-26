@@ -3,14 +3,21 @@ import { prisma } from '@/lib/db'
 import { requireAdmin } from '@/lib/rbac'
 import { UserUpdateSchema } from '@/lib/validators'
 import bcrypt from 'bcryptjs'
+import { logAudit } from '@/lib/audit'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAdmin()
+  const { error, session } = await requireAdmin()
   if (error) return error
 
   const body = await req.json()
   const parsed = UserUpdateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+
+  const existing = await prisma.user.findUnique({
+    where: { id: params.id },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  })
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { password, ...rest } = parsed.data
   const data: { name?: string; role?: 'ADMIN' | 'USER'; passwordHash?: string } = { ...rest }
@@ -23,13 +30,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data,
     select: { id: true, name: true, email: true, role: true, createdAt: true },
   })
+
+  logAudit({ entityType: 'User', entityId: user.id, action: 'UPDATE', userId: session!.user.id, before: existing, after: user })
+
   return NextResponse.json(user)
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAdmin()
+  const { error, session } = await requireAdmin()
   if (error) return error
 
+  const existing = await prisma.user.findUnique({
+    where: { id: params.id },
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  })
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
   await prisma.user.delete({ where: { id: params.id } })
+  logAudit({ entityType: 'User', entityId: params.id, action: 'DELETE', userId: session!.user.id, before: existing })
+
   return NextResponse.json({ success: true })
 }

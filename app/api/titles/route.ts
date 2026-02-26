@@ -4,6 +4,7 @@ import { requireAdmin, requireAuth } from '@/lib/rbac'
 import { TitleCreateSchema } from '@/lib/validators'
 import { findTitleIdsByText } from '@/lib/search'
 import { Prisma, TitleType, InternalStatus, TvStatus } from '@prisma/client'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -78,6 +79,8 @@ export async function POST(req: NextRequest) {
       }))
     })
   }
+
+  logAudit({ entityType: 'Title', entityId: title.id, action: 'CREATE', userId: session!.user.id, after: title })
 
   return NextResponse.json(title, { status: 201 })
 }

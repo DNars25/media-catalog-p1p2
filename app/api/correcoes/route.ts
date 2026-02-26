@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth, requireAdmin } from '@/lib/rbac'
 import { Prisma, TitleType, PreferredSystem, RequestStatus } from '@prisma/client'
+import { logAudit } from '@/lib/audit'
+import { sendPublicRequestCreated } from '@/lib/email'
 
 async function getSystemUserId(): Promise<string | null> {
   if (process.env.RECEPCAO_USER_ID) return process.env.RECEPCAO_USER_ID
@@ -97,6 +99,16 @@ export async function POST(req: Request) {
         linkedTitleId,
         createdById: systemUserId,
       },
+    })
+
+    logAudit({ entityType: 'Request', entityId: correction.id, action: 'CREATE_CORRECTION', userId: systemUserId, after: correction })
+
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } })
+    sendPublicRequestCreated({
+      adminEmails: admins.map(a => a.email),
+      requestTitle: title,
+      source: 'Correção',
+      type,
     })
 
     return NextResponse.json({ ok: true, id: correction.id })

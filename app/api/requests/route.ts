@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/rbac'
 import { findRequestIdsByText } from '@/lib/search'
 import { RequestCreateSchema } from '@/lib/validators'
 import { Prisma, RequestStatus } from '@prisma/client'
+import { logAudit } from '@/lib/audit'
+import { sendRequestCreated } from '@/lib/email'
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -70,5 +72,18 @@ export async function POST(req: NextRequest) {
       createdById: session!.user.id,
     },
   })
+
+  logAudit({ entityType: 'Request', entityId: request.id, action: 'CREATE', userId: session!.user.id, after: request })
+
+  const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true, name: true } })
+  const createdBy = await prisma.user.findUnique({ where: { id: session!.user.id }, select: { name: true } })
+  sendRequestCreated({
+    adminEmails: admins.map(a => a.email),
+    requestTitle: requestedTitle,
+    requestedByName: createdBy?.name ?? session!.user.email ?? 'Usuário',
+    type,
+    notes,
+  })
+
   return NextResponse.json(request, { status: 201 })
 }
