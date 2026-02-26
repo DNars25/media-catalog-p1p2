@@ -9,22 +9,26 @@ import { Badge, PBadge } from '@/components/badges'
 import { SearchInput } from '@/components/search-input'
 import { EditTitleModal } from '@/components/edit-title-modal'
 
+type TitleType = 'MOVIE' | 'TV'
+type InternalStatusType = 'AGUARDANDO_DOWNLOAD' | 'DISPONIVEL' | 'INDISPONIVEL'
+type TvStatusType = 'EM_ANDAMENTO' | 'FINALIZADA'
+
 interface Title {
   id: string
   title: string
-  type: 'MOVIE' | 'TV'
+  type: TitleType
   releaseYear: number | null
   posterUrl: string | null
   hasP1: boolean
   hasP2: boolean
   audioType: string | null
-  internalStatus: string
-  tvStatus: string | null
+  internalStatus: InternalStatusType
+  tvStatus: TvStatusType | null
   overview: string | null
   tmdbId: number
   tvSeasons: number | null
   tvEpisodes: number | null
-  genres: any
+  genres: string[]
   createdBy: { name: string }
 }
 
@@ -65,7 +69,7 @@ export default function TitlesPage() {
     setTotal(data.total || 0)
     setPages(data.pages || 1)
     setLoading(false)
-  }, [page, search, filterType, filterP1, filterP2, filterStatus])
+  }, [page, search, filterType, filterP1, filterP2, filterAudio, filterStatus])
 
   useEffect(() => {
     const t = setTimeout(fetchTitles, search ? 300 : 0)
@@ -174,15 +178,15 @@ export default function TitlesPage() {
                     <td className="py-3 px-4">
                       <p className="font-medium text-sm">{t.title}</p>
                       {t.type === 'TV' && t.tvStatus && (
-                        <div className="mt-1"><Badge status={t.tvStatus as any} /></div>
+                        <div className="mt-1"><Badge status={t.tvStatus} /></div>
                       )}
                     </td>
-                    <td className="py-3 px-4 hidden sm:table-cell"><Badge status={t.type as any} /></td>
+                    <td className="py-3 px-4 hidden sm:table-cell"><Badge status={t.type} /></td>
                     <td className="py-3 px-4 text-sm text-muted-foreground hidden sm:table-cell">{t.releaseYear || '—'}</td>
                     <td className="py-3 px-4 hidden md:table-cell"><span className="text-xs text-zinc-400">{t.audioType === "DUBLADO_LEGENDADO" ? "Dub/Leg" : t.audioType === "LEGENDADO" ? "Leg" : t.audioType === "DUBLADO" ? "Dub" : "—"}</span></td>
                     <td className="py-3 px-4"><PBadge type="P1" active={t.hasP1} /></td>
                     <td className="py-3 px-4"><PBadge type="P2" active={t.hasP2} /></td>
-                    <td className="py-3 px-4"><Badge status={t.internalStatus as any} /></td>
+                    <td className="py-3 px-4"><Badge status={t.internalStatus} /></td>
                     {isAdmin && (
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-2">

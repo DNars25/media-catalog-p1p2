@@ -4,6 +4,29 @@ import { requireAuth } from '@/lib/rbac'
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const TMDB_IMAGE = 'https://image.tmdb.org/t/p/w500'
 
+interface TmdbCastMember { name: string }
+interface TmdbMetadataGenre { id: number; name: string }
+interface TmdbMetadataSeason {
+  season_number: number
+  episode_count: number
+  name: string
+}
+interface TmdbMetadataResponse {
+  id: number
+  title?: string
+  name?: string
+  overview: string
+  poster_path: string | null
+  release_date?: string
+  first_air_date?: string
+  genres?: TmdbMetadataGenre[]
+  number_of_seasons?: number | null
+  number_of_episodes?: number | null
+  status?: string
+  seasons?: TmdbMetadataSeason[]
+  credits?: { cast?: TmdbCastMember[] }
+}
+
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
   if (error) return error
@@ -21,11 +44,9 @@ export async function GET(req: NextRequest) {
   try {
     const res = await fetch(url)
     if (!res.ok) throw new Error(`TMDB ${res.status}`)
-    const data = await res.json()
+    const data = await res.json() as TmdbMetadataResponse
 
-    const actors = (data.credits?.cast || [])
-      .slice(0, 10)
-      .map((c: any) => c.name as string)
+    const actors = (data.credits?.cast ?? []).slice(0, 10).map(c => c.name)
 
     const result = {
       tmdbId: data.id,
@@ -39,21 +60,20 @@ export async function GET(req: NextRequest) {
         : data.first_air_date
         ? parseInt(data.first_air_date.split('-')[0])
         : null,
-      genres: (data.genres || []).map((g: any) => g.name as string),
+      genres: (data.genres ?? []).map(g => g.name),
       actor: actors,
-      // TV only
       tvSeasons: data.number_of_seasons ?? null,
       tvEpisodes: data.number_of_episodes ?? null,
       tvStatus: data.status ?? null,
       seasons: type === 'tv'
-        ? (data.seasons || [])
-            .filter((s: any) => s.season_number > 0)
-            .map((s: any) => ({ season_number: s.season_number, episode_count: s.episode_count, name: s.name }))
+        ? (data.seasons ?? [])
+            .filter(s => s.season_number > 0)
+            .map(s => ({ season_number: s.season_number, episode_count: s.episode_count, name: s.name }))
         : [],
     }
 
     return NextResponse.json(result)
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'TMDB error' }, { status: 500 })
   }
 }

@@ -17,9 +17,19 @@ export function formatDate(date: Date | string) {
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; reset: number }>()
+let _rlCallCount = 0
 
 export function rateLimit(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
+
+  // Cleanup expired entries every 500 calls to prevent memory leak
+  if (++_rlCallCount >= 500) {
+    _rlCallCount = 0
+    rateLimitMap.forEach((v, k) => {
+      if (now > v.reset) rateLimitMap.delete(k)
+    })
+  }
+
   const entry = rateLimitMap.get(key)
 
   if (!entry || now > entry.reset) {

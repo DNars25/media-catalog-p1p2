@@ -50,8 +50,9 @@ export async function POST(req: NextRequest) {
 
       // Pequeno delay para não sobrecarregar o TMDB
       await new Promise(r => setTimeout(r, 150))
-    } catch (err: any) {
-      results.push({ title: t.title, episodes: 0, status: 'error', reason: err.message ?? 'Erro desconhecido' })
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : 'Erro desconhecido'
+      results.push({ title: t.title, episodes: 0, status: 'error', reason })
     }
   }
 

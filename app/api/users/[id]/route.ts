@@ -12,10 +12,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const parsed = UserUpdateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const data: any = { ...parsed.data }
-  if (data.password) {
-    data.passwordHash = await bcrypt.hash(data.password, 12)
-    delete data.password
+  const { password, ...rest } = parsed.data
+  const data: { name?: string; role?: 'ADMIN' | 'USER'; passwordHash?: string } = { ...rest }
+  if (password) {
+    data.passwordHash = await bcrypt.hash(password, 12)
   }
 
   const user = await prisma.user.update({

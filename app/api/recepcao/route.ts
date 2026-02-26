@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { searchTMDB, TmdbSearchResult } from '@/lib/tmdb'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -10,10 +11,10 @@ export async function GET(req: Request) {
   const tmdbType = type === 'MOVIE' ? 'movie' : 'tv'
   const localType = type === 'MOVIE' ? 'MOVIE' : 'TV'
 
-  const tmdbRes = await fetch('https://api.themoviedb.org/3/search/' + tmdbType + '?api_key=' + process.env.TMDB_API_KEY + '&query=' + encodeURIComponent(query) + '&language=pt-BR')
-    .then(r => r.json()).catch(() => ({ results: [] }))
-
-  const tmdbIds = (tmdbRes.results || []).map((r: any) => r.id)
+  const tmdbMatches = await searchTMDB(query, tmdbType as 'movie' | 'tv').catch(
+    () => [] as TmdbSearchResult[]
+  )
+  const tmdbIds = tmdbMatches.map(r => r.tmdbId)
 
   const local = await prisma.title.findMany({
     where: {
@@ -22,29 +23,29 @@ export async function GET(req: Request) {
         { title: { contains: query, mode: 'insensitive' } },
         { title: { contains: query.replace(/&/g, 'e'), mode: 'insensitive' } },
         { title: { contains: query.replace(/e/g, '&'), mode: 'insensitive' } },
-        { tmdbId: { in: tmdbIds } }
-      ]
+        { tmdbId: { in: tmdbIds } },
+      ],
     },
     select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true, tmdbId: true },
-    take: 20
+    take: 20,
   })
 
-  const localMapped = local.map((t: any) => ({
+  const localMapped = local.map(t => ({
     id: t.id,
     title: t.title,
     year: t.releaseYear,
     server: t.hasP1 && t.hasP2 ? 'P1 e P2' : t.hasP1 ? 'P1' : t.hasP2 ? 'P2' : 'Nenhum',
     posterUrl: t.posterUrl,
-    tmdbId: t.tmdbId
+    tmdbId: t.tmdbId,
   }))
 
-  const tmdbResults = (tmdbRes.results || []).slice(0, 10).map((r: any) => ({
-    tmdbId: r.id,
-    title: r.title || r.name,
-    year: (r.release_date || r.first_air_date || '').substring(0, 4),
-    poster: r.poster_path ? 'https://image.tmdb.org/t/p/w200' + r.poster_path : null,
-    overview: r.overview
+  const tmdb = tmdbMatches.slice(0, 10).map(r => ({
+    tmdbId: r.tmdbId,
+    title: r.title,
+    year: r.releaseYear ? String(r.releaseYear) : '',
+    poster: r.posterUrl,
+    overview: r.overview,
   }))
 
-  return NextResponse.json({ local: localMapped, tmdb: tmdbResults })
+  return NextResponse.json({ local: localMapped, tmdb })
 }

@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
     const data = await getAnalyticsData(period, userId, mediaType)
     return NextResponse.json(data)
   } catch (err) {
-    console.error('[analytics]', err)
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: msg }, { status: 500 })
   }

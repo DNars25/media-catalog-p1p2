@@ -3,6 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_KEY = process.env.TMDB_API_KEY;
 
+interface TmdbDiscoverItem {
+  id: number
+  title?: string
+  name?: string
+  poster_path: string | null
+  release_date?: string
+  first_air_date?: string
+  overview: string
+}
+
+interface TmdbDiscoverResponse {
+  results?: TmdbDiscoverItem[]
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
@@ -19,8 +33,8 @@ export async function GET(request: NextRequest) {
     const url = TMDB_BASE + endpoint + "?api_key=" + TMDB_KEY + "&language=pt-BR&page=1&region=BR";
     const res = await fetch(url, { next: { revalidate: 3600 } });
     if (!res.ok) throw new Error("TMDB erro " + res.status);
-    const data = await res.json();
-    const results = (data.results || []).slice(0, 8).map((item: any) => ({
+    const data = await res.json() as TmdbDiscoverResponse;
+    const results = (data.results ?? []).slice(0, 8).map((item) => ({
       tmdbId: item.id,
       title: item.title || item.name,
       posterPath: item.poster_path ? "https://image.tmdb.org/t/p/w300" + item.poster_path : null,

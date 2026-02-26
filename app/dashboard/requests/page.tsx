@@ -8,11 +8,14 @@ import { Badge } from '@/components/badges'
 import { SearchInput } from '@/components/search-input'
 import { formatDate } from '@/lib/utils'
 
+type RequestType = 'MOVIE' | 'TV'
+type RequestStatusType = 'ABERTO' | 'EM_ANDAMENTO' | 'EM_PROGRESSO' | 'CONCLUIDO' | 'REJEITADO'
+
 interface Request {
   id: string
   requestedTitle: string
-  type: string
-  status: string
+  type: RequestType
+  status: RequestStatusType
   preferredSystem: string | null
   notes: string | null
   audioType: string | null
@@ -325,13 +328,13 @@ export default function RequestsPage() {
                         </div>
                       </div>
                   </td>
-                  <td className="py-3 px-4 hidden sm:table-cell"><Badge status={r.type as any} /></td>
+                  <td className="py-3 px-4 hidden sm:table-cell"><Badge status={r.type} /></td>
                   <td className="py-3 px-4">
                     {isAdmin ? (
                       <select value={r.status} onChange={(e) => handleStatusChange(r.id, e.target.value, r.type, r.audioType)} className="bg-muted border border-border rounded-md px-2 py-1 text-xs focus:outline-none">
                         {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
                       </select>
-                    ) : <Badge status={r.status as any} />}
+                    ) : <Badge status={r.status} />}
                   </td>
                   <td className="py-3 px-4 hidden md:table-cell">
                     {r.status === 'CONCLUIDO' ? (
