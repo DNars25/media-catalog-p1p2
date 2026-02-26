@@ -1,258 +1,399 @@
-"use client";
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { toast } from "sonner";
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
+import { Lock } from 'lucide-react'
 
 interface TitleEpisode {
-  season: number;
-  episode: number;
+  season: number
+  episode: number
 }
 
 interface LatestRequest {
-  id: string;
-  status: string;
-  audioType: string | null;
-  seasonNumber: number | null;
-  notes: string | null;
-  createdAt: string;
-  createdById: string;
-  createdBy: { name: string; email: string };
+  id: string
+  status: string
+  audioType: string | null
+  seasonNumber: number | null
+  notes: string | null
+  createdAt: string
+  createdById: string
+  createdBy: { name: string; email: string }
 }
 
 interface SerieCard {
-  id: string;
-  title: string;
-  posterUrl: string | null;
-  tvSeasons: number | null;
-  tmdbId: number;
-  latestRequest: LatestRequest | null;
+  id: string
+  title: string
+  posterUrl: string | null
+  tvSeasons: number | null
+  tvEpisodes: number | null
+  tvStatus: string | null
+  tmdbId: number
+  savedEpisodeCount: number
+  latestRequest: LatestRequest | null
 }
 
-const statusColor: Record<string, string> = {
-  ABERTO: "bg-yellow-600",
-  EM_ANDAMENTO: "bg-blue-500",
-  EM_PROGRESSO: "bg-purple-600",
-  CONCLUIDO: "bg-green-600",
-  REJEITADO: "bg-red-600",
-};
-const statusLabel: Record<string, string> = {
-  ABERTO: "Aberto",
-  EM_ANDAMENTO: "Em Andamento",
-  EM_PROGRESSO: "Em Progresso",
-  CONCLUIDO: "Concluído",
-  REJEITADO: "Rejeitado",
-};
+const reqStatusColor: Record<string, string> = {
+  ABERTO: 'bg-yellow-600',
+  EM_ANDAMENTO: 'bg-blue-500',
+  EM_PROGRESSO: 'bg-purple-600',
+  CONCLUIDO: 'bg-green-600',
+  REJEITADO: 'bg-red-600',
+}
+const reqStatusLabel: Record<string, string> = {
+  ABERTO: 'Aberto',
+  EM_ANDAMENTO: 'Em Andamento',
+  EM_PROGRESSO: 'Em Progresso',
+  CONCLUIDO: 'Concluído',
+  REJEITADO: 'Rejeitado',
+}
 
+// ────────────────────────────────────────────────────────────────────────────
+// EpisodeGrid — episódios SALVOS são travados (laranja), NOVOS são selecionáveis
+// ────────────────────────────────────────────────────────────────────────────
 function EpisodeGrid({
-  savedEpisodes, tmdbSeasons, selectedEpisodes, onToggle, onSelectAll, onClear, selectedSeason, onSeasonChange,
+  savedEpisodes,
+  tmdbSeasons,
+  selectedNew,
+  onToggleNew,
+  onSelectAllNew,
+  onClearNew,
+  selectedSeason,
+  onSeasonChange,
+  manualSeasonCounts,
+  onManualCount,
 }: {
-  savedEpisodes: TitleEpisode[];
-  tmdbSeasons: Record<number, number>;
-  selectedEpisodes: Record<number, number[]>;
-  onToggle: (season: number, ep: number) => void;
-  onSelectAll: (season: number) => void;
-  onClear: (season: number) => void;
-  selectedSeason: number;
-  onSeasonChange: (s: number) => void;
+  savedEpisodes: TitleEpisode[]
+  tmdbSeasons: Record<number, number>
+  selectedNew: Record<number, number[]>
+  onToggleNew: (season: number, ep: number) => void
+  onSelectAllNew: (season: number) => void
+  onClearNew: (season: number) => void
+  selectedSeason: number
+  onSeasonChange: (s: number) => void
+  manualSeasonCounts: Record<number, number>
+  onManualCount: (season: number, count: number) => void
 }) {
-  const seasons = Object.keys(tmdbSeasons).length > 0
-    ? Object.keys(tmdbSeasons).map(Number).sort((a, b) => a - b)
-    : Array.from(new Set(savedEpisodes.map(e => e.season))).sort((a, b) => a - b);
-  if (seasons.length === 0) return null;
+  const baseSeasons =
+    Object.keys(tmdbSeasons).length > 0
+      ? Object.keys(tmdbSeasons).map(Number).sort((a, b) => a - b)
+      : Array.from(new Set(savedEpisodes.map(e => e.season))).sort((a, b) => a - b)
 
-  const selectedEpsInSeason = selectedEpisodes[selectedSeason] || [];
-  const savedEpsInSeason = savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode);
-  const maxEpInSeason = tmdbSeasons[selectedSeason]
-    ?? Math.max(0, ...savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode));
+  const maxSeason = baseSeasons.length > 0 ? Math.max(...baseSeasons) : 0
+  // Sempre inclui a próxima temporada para permitir registrar novas
+  const seasons = maxSeason > 0 ? [...baseSeasons, maxSeason + 1] : baseSeasons
+  if (seasons.length === 0) return null
+
+  const savedEpsInSeason = savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode)
+  const savedSet = new Set(savedEpsInSeason)
+  const newEpsInSeason = selectedNew[selectedSeason] || []
+  const newSet = new Set(newEpsInSeason)
+
+  const tmdbCount = tmdbSeasons[selectedSeason] > 0 ? tmdbSeasons[selectedSeason] : 0
+  const savedMax = savedEpsInSeason.length > 0 ? Math.max(...savedEpsInSeason) : 0
+  const maxFromData = tmdbCount || savedMax
+  const maxEpInSeason = maxFromData || (manualSeasonCounts[selectedSeason] ?? 0)
+  const needsManualInput = maxFromData === 0
 
   return (
     <div>
+      {/* Abas de temporada */}
       <div className="flex gap-2 flex-wrap mb-3">
         {seasons.map(s => {
-          const selCount = (selectedEpisodes[s] || []).length;
-          const tmdbTotal = tmdbSeasons[s] ?? 0;
+          const savedCount = savedEpisodes.filter(e => e.season === s).length
+          const newCount = (selectedNew[s] || []).length
           return (
-            <button key={s} onClick={() => onSeasonChange(s)}
-              className={"px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 " + (selectedSeason === s ? "bg-orange-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+            <button
+              key={s}
+              onClick={() => onSeasonChange(s)}
+              className={
+                'px-3 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 ' +
+                (selectedSeason === s ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700')
+              }
             >
               T{s}
-              {selCount > 0 && (
-                <span className={"rounded-full px-1.5 text-[10px] font-bold " + (selectedSeason === s ? "bg-white/20" : "bg-orange-500/20 text-orange-400")}>
-                  {selCount}{tmdbTotal > 0 ? "/" + tmdbTotal : ""}
+              {savedCount > 0 && (
+                <span
+                  className={
+                    'rounded-full px-1.5 text-[10px] font-bold ' +
+                    (selectedSeason === s ? 'bg-white/20' : 'bg-orange-500/20 text-orange-400')
+                  }
+                >
+                  {savedCount}
+                </span>
+              )}
+              {newCount > 0 && (
+                <span
+                  className={
+                    'rounded-full px-1.5 text-[10px] font-bold ' +
+                    (selectedSeason === s ? 'bg-green-400/30 text-green-200' : 'bg-green-500/20 text-green-400')
+                  }
+                >
+                  +{newCount}
                 </span>
               )}
             </button>
-          );
+          )
         })}
       </div>
+
+      {/* Input manual quando TMDB não tem dados */}
+      {needsManualInput && (
+        <div className="mb-3 flex items-center gap-3">
+          <p className="text-xs text-zinc-500">TMDB sem dados para T{selectedSeason}. Quantos episódios tem?</p>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={manualSeasonCounts[selectedSeason] || ''}
+            onChange={e => {
+              const n = parseInt(e.target.value)
+              onManualCount(selectedSeason, isNaN(n) || n < 1 ? 0 : n)
+            }}
+            placeholder="Ex: 8"
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white w-20 focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+        </div>
+      )}
+
       {maxEpInSeason > 0 && (
         <div className="bg-zinc-800 rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-zinc-400 flex items-center gap-2">
               Temporada {selectedSeason}
-              {tmdbSeasons[selectedSeason] && <span className="ml-1 text-zinc-500">({tmdbSeasons[selectedSeason]} eps no TMDB)</span>}
+              {tmdbCount > 0 && <span className="text-zinc-500">· {tmdbCount} eps no TMDB</span>}
+              {savedEpsInSeason.length > 0 && (
+                <span className="text-orange-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  {savedEpsInSeason.length} no servidor
+                </span>
+              )}
             </span>
             <div className="flex gap-1.5">
-              <button onClick={() => onSelectAll(selectedSeason)} className="px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition">Todos</button>
-              <button onClick={() => onClear(selectedSeason)} className="px-2 py-0.5 rounded text-xs bg-zinc-700 text-zinc-400 hover:bg-zinc-600 transition">Limpar</button>
+              <button
+                onClick={() => onSelectAllNew(selectedSeason)}
+                className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400 hover:bg-green-500/30 transition"
+              >
+                + Todos novos
+              </button>
+              <button
+                onClick={() => onClearNew(selectedSeason)}
+                className="px-2 py-0.5 rounded text-xs bg-zinc-700 text-zinc-400 hover:bg-zinc-600 transition"
+              >
+                Limpar
+              </button>
             </div>
           </div>
+
           <div className="flex flex-wrap gap-1">
             {Array.from({ length: maxEpInSeason }, (_, i) => i + 1).map(ep => {
-              const isSelected = selectedEpsInSeason.includes(ep);
-              const wasAlreadySaved = savedEpsInSeason.includes(ep);
+              const isSaved = savedSet.has(ep)
+              const isNew = newSet.has(ep)
               return (
-                <button key={ep} onClick={() => onToggle(selectedSeason, ep)}
-                  title={wasAlreadySaved ? "Já estava no servidor" : isSelected ? "Adicionado agora" : "Não disponível"}
-                  className={"w-10 h-8 rounded text-xs font-semibold transition " + (isSelected ? (wasAlreadySaved ? "bg-orange-500 text-white" : "bg-green-600 text-white") : "bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700")}
+                <button
+                  key={ep}
+                  onClick={() => !isSaved && onToggleNew(selectedSeason, ep)}
+                  disabled={isSaved}
+                  title={isSaved ? 'Já no servidor' : isNew ? 'Adicionando' : 'Disponível para adicionar'}
+                  className={
+                    'w-10 h-8 rounded text-xs font-semibold transition flex items-center justify-center ' +
+                    (isSaved
+                      ? 'bg-orange-500/80 text-white cursor-not-allowed'
+                      : isNew
+                      ? 'bg-green-600 text-white'
+                      : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700')
+                  }
                 >
-                  {ep}
+                  {isSaved ? <Lock className="w-3 h-3" /> : ep}
                 </button>
-              );
+              )
             })}
           </div>
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-xs text-zinc-500">{selectedEpsInSeason.length} de {maxEpInSeason} selecionados</p>
-            {selectedEpsInSeason.some(ep => !savedEpsInSeason.includes(ep)) && (
-              <p className="text-xs text-green-500">+{selectedEpsInSeason.filter(ep => !savedEpsInSeason.includes(ep)).length} novos</p>
-            )}
+
+          {newEpsInSeason.length > 0 && (
+            <p className="text-xs text-green-500 mt-2">+{newEpsInSeason.length} para adicionar nesta temporada</p>
+          )}
+
+          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-zinc-700/50">
+            <span className="flex items-center gap-1.5 text-xs text-zinc-600">
+              <span className="w-3 h-3 rounded bg-orange-500/80 inline-block" />
+              Já no servidor (travado)
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-zinc-600">
+              <span className="w-3 h-3 rounded bg-green-600 inline-block" />
+              Adicionando agora
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-zinc-600">
+              <span className="w-3 h-3 rounded bg-zinc-900 border border-zinc-700 inline-block" />
+              Disponível
+            </span>
           </div>
         </div>
       )}
     </div>
-  );
+  )
 }
 
-function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
-  serie: SerieCard;
-  onClose: () => void;
-  onRefresh: () => void;
-  isAdmin: boolean;
-  userId: string;
+// ────────────────────────────────────────────────────────────────────────────
+// SerieModal — consulta TMDB ao abrir, permite adicionar episódios
+// ────────────────────────────────────────────────────────────────────────────
+function SerieModal({
+  serie,
+  onClose,
+  onRefresh,
+  isAdmin,
+  userId,
+}: {
+  serie: SerieCard
+  onClose: () => void
+  onRefresh: () => void
+  isAdmin: boolean
+  userId: string
 }) {
-  const [updating, setUpdating] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [showUpdateForm, setShowUpdateForm] = useState(false);
-  const [audio, setAudio] = useState(serie.latestRequest?.audioType || "DUBLADO");
-  const [seriesFinalizada, setSeriesFinalizada] = useState(false);
-  const [obs, setObs] = useState("");
-  const [currentEpisodes, setCurrentEpisodes] = useState<TitleEpisode[]>([]);
-  const [tmdbSeasons, setTmdbSeasons] = useState<Record<number, number>>({});
-  const [selectedEpisodes, setSelectedEpisodes] = useState<Record<number, number[]>>({});
-  const [selectedSeason, setSelectedSeason] = useState(1);
-  const [loadingEpisodes, setLoadingEpisodes] = useState(false);
-  const canEdit = isAdmin || serie.latestRequest?.createdById === userId;
+  const [updating, setUpdating] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showUpdateForm, setShowUpdateForm] = useState(false)
+  const [audio, setAudio] = useState(serie.latestRequest?.audioType || 'DUBLADO')
+  const [manualSeasonCounts, setManualSeasonCounts] = useState<Record<number, number>>({})
+  const [seriesFinalizada, setSeriesFinalizada] = useState(false)
+  const [obs, setObs] = useState('')
+  const [savedEpisodes, setSavedEpisodes] = useState<TitleEpisode[]>([])
+  const [tmdbSeasons, setTmdbSeasons] = useState<Record<number, number>>({})
+  const [selectedNew, setSelectedNew] = useState<Record<number, number[]>>({})
+  const [selectedSeason, setSelectedSeason] = useState(1)
+  const [loadingEpisodes, setLoadingEpisodes] = useState(false)
+
+  const canEdit = isAdmin || serie.latestRequest?.createdById === userId
 
   useEffect(() => {
     async function load() {
-      setLoadingEpisodes(true);
+      setLoadingEpisodes(true)
       try {
-        const titleRes = await fetch("/api/titles/" + serie.id);
-        const data = await titleRes.json();
-        const eps: TitleEpisode[] = data.episodes || [];
-        setCurrentEpisodes(eps);
-        const bySeasonMap: Record<number, number[]> = {};
-        for (const ep of eps) {
-          if (!bySeasonMap[ep.season]) bySeasonMap[ep.season] = [];
-          bySeasonMap[ep.season].push(ep.episode);
-        }
-        setSelectedEpisodes(bySeasonMap);
-        if (data.tmdbId && data.type === "TV") {
+        const titleRes = await fetch('/api/titles/' + serie.id)
+        const data = await titleRes.json()
+        const eps: TitleEpisode[] = data.episodes || []
+        setSavedEpisodes(eps)
+        setSelectedNew({}) // começa vazio — só novos episódios entram
+
+        if (data.tmdbId && data.type === 'TV') {
           try {
-            const tmdbRes = await fetch("/api/tmdb/details?type=tv&tmdbId=" + data.tmdbId);
-            const tmdbData = await tmdbRes.json();
+            const tmdbRes = await fetch('/api/tmdb/details?type=tv&tmdbId=' + data.tmdbId)
+            const tmdbData = await tmdbRes.json()
             if (Array.isArray(tmdbData.seasons)) {
-              const seasonMap: Record<number, number> = {};
+              const seasonMap: Record<number, number> = {}
               for (const s of tmdbData.seasons) {
-                if (s.season_number > 0) seasonMap[s.season_number] = s.episode_count;
+                if (s.season_number > 0) seasonMap[s.season_number] = s.episode_count
               }
-              setTmdbSeasons(seasonMap);
+              setTmdbSeasons(seasonMap)
+              // Abre na última temporada do TMDB
+              const latestTmdb = Math.max(
+                ...tmdbData.seasons
+                  .filter((s: { season_number: number }) => s.season_number > 0)
+                  .map((s: { season_number: number }) => s.season_number)
+              )
+              if (latestTmdb > 0) setSelectedSeason(latestTmdb)
             }
           } catch (_) {}
+        } else if (eps.length > 0) {
+          setSelectedSeason(Math.max(...eps.map(e => e.season)))
         }
-        if (eps.length > 0) setSelectedSeason(Math.max(...eps.map(e => e.season)));
       } finally {
-        setLoadingEpisodes(false);
+        setLoadingEpisodes(false)
       }
     }
-    load();
-  }, [serie.id]);
+    load()
+  }, [serie.id])
 
-  const toggleEpisode = (season: number, ep: number) => {
-    setSelectedEpisodes(prev => {
-      const current = prev[season] || [];
-      const idx = current.indexOf(ep);
-      if (idx === -1) return { ...prev, [season]: [...current, ep].sort((a, b) => a - b) };
-      return { ...prev, [season]: current.filter(e => e !== ep) };
-    });
-  };
-  const selectAllInSeason = (season: number) => {
-    const maxEp = tmdbSeasons[season] ?? Math.max(0, ...currentEpisodes.filter(e => e.season === season).map(e => e.episode));
-    if (maxEp > 0) setSelectedEpisodes(prev => ({ ...prev, [season]: Array.from({ length: maxEp }, (_, i) => i + 1) }));
-  };
-  const clearSeason = (season: number) => setSelectedEpisodes(prev => ({ ...prev, [season]: [] }));
+  const toggleNew = (season: number, ep: number) => {
+    setSelectedNew(prev => {
+      const current = prev[season] || []
+      const idx = current.indexOf(ep)
+      if (idx === -1) return { ...prev, [season]: [...current, ep].sort((a, b) => a - b) }
+      return { ...prev, [season]: current.filter(e => e !== ep) }
+    })
+  }
 
-  const buildNotesFromEpisodes = () => {
-    const parts = Object.entries(selectedEpisodes)
+  const selectAllNew = (season: number) => {
+    const savedSet = new Set(savedEpisodes.filter(e => e.season === season).map(e => e.episode))
+    const tmdbCount = tmdbSeasons[season] > 0 ? tmdbSeasons[season] : 0
+    const savedInSeason = savedEpisodes.filter(e => e.season === season)
+    const savedMax = savedInSeason.length > 0 ? Math.max(...savedInSeason.map(e => e.episode)) : 0
+    const maxEp = tmdbCount || savedMax || manualSeasonCounts[season] || 0
+    if (maxEp > 0) {
+      const newEps = Array.from({ length: maxEp }, (_, i) => i + 1).filter(ep => !savedSet.has(ep))
+      setSelectedNew(prev => ({ ...prev, [season]: newEps }))
+    }
+  }
+
+  const clearNew = (season: number) => setSelectedNew(prev => ({ ...prev, [season]: [] }))
+
+  const hasNewEpisodes = Object.values(selectedNew).some(eps => eps.length > 0)
+  const totalNewEps = Object.values(selectedNew).reduce((sum, eps) => sum + eps.length, 0)
+
+  const buildNotesFromNew = () => {
+    const parts = Object.entries(selectedNew)
       .filter(([, eps]) => eps.length > 0)
       .sort(([a], [b]) => parseInt(a) - parseInt(b))
       .map(([season, eps]) => {
-        const sorted = [...eps].sort((a, b) => a - b);
-        return `Temp ${season}: eps ${sorted[0]}-${sorted[sorted.length - 1]}`;
-      });
-    return parts.length > 0 ? parts.join(", ") : null;
-  };
+        const sorted = [...eps].sort((a, b) => a - b)
+        return `Temp ${season}: eps ${sorted[0]}-${sorted[sorted.length - 1]}`
+      })
+    return parts.length > 0 ? parts.join(', ') : null
+  }
 
   async function handleStatusChange(newStatus: string) {
-    if (!serie.latestRequest) return;
-    setUpdating(true);
+    if (!serie.latestRequest) return
+    setUpdating(true)
     try {
-      const res = await fetch("/api/requests/" + serie.latestRequest.id, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/requests/' + serie.latestRequest.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success("Status atualizado!");
-      onRefresh();
-      onClose();
+      })
+      if (!res.ok) throw new Error()
+      toast.success('Status atualizado!')
+      onRefresh()
+      onClose()
     } catch {
-      toast.error("Erro ao atualizar status");
+      toast.error('Erro ao atualizar status')
     } finally {
-      setUpdating(false);
+      setUpdating(false)
     }
   }
 
   async function handleSaveUpdate() {
-    setUpdating(true);
+    setUpdating(true)
     try {
-      const newStatus = seriesFinalizada ? "CONCLUIDO" : "ABERTO";
-      const epNotes = buildNotesFromEpisodes();
-      const notes = [epNotes, obs.trim()].filter(Boolean).join("\n") || null;
+      // 1. Adiciona apenas episódios NOVOS (PATCH = add-only, não apaga existentes)
+      if (hasNewEpisodes) {
+        const episodesData = Object.entries(selectedNew).flatMap(([season, eps]) =>
+          eps.map(ep => ({ season: parseInt(season), episode: ep }))
+        )
+        const res = await fetch('/api/titles/' + serie.id + '/episodes', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ episodesData }),
+        })
+        if (!res.ok) throw new Error()
+      }
 
-      const episodesData = Object.entries(selectedEpisodes).flatMap(([season, eps]) =>
-        eps.map(ep => ({ season: parseInt(season), episode: ep }))
-      );
-      await fetch("/api/titles/" + serie.id + "/episodes", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ episodesData }),
-      });
+      // 2. Cria ou atualiza o pedido de atualização
+      const epNotes = buildNotesFromNew()
+      const notes = [epNotes, obs.trim()].filter(Boolean).join('\n') || null
+      const newStatus = seriesFinalizada ? 'CONCLUIDO' : 'ABERTO'
 
       if (serie.latestRequest) {
-        await fetch("/api/requests/" + serie.latestRequest.id, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+        await fetch('/api/requests/' + serie.latestRequest.id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: newStatus, audioType: audio, notes }),
-        });
+        })
       } else {
-        await fetch("/api/requests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+        await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             requestedTitle: serie.title,
-            type: "TV",
+            type: 'TV',
             isUpdate: true,
             linkedTitleId: serie.id,
             tmdbId: serie.tmdbId,
@@ -260,86 +401,130 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
             audioType: audio,
             notes,
           }),
-        });
+        })
       }
 
+      // 3. Marca como finalizada se o usuário assim indicou
       if (seriesFinalizada) {
-        await fetch("/api/titles/" + serie.id, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tvStatus: "FINALIZADA" }),
-        });
-        toast.success("Série finalizada e biblioteca atualizada!");
+        await fetch('/api/titles/' + serie.id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tvStatus: 'FINALIZADA' }),
+        })
+        toast.success('Série finalizada e biblioteca atualizada!')
       } else {
-        toast.success("Atualização registrada!");
+        toast.success(hasNewEpisodes ? `+${totalNewEps} episódios adicionados!` : 'Pedido registrado!')
       }
-      onRefresh();
-      onClose();
+
+      onRefresh()
+      onClose()
     } catch {
-      toast.error("Erro ao salvar");
+      toast.error('Erro ao salvar')
     } finally {
-      setUpdating(false);
+      setUpdating(false)
     }
   }
 
   async function handleDeleteRequest() {
-    if (!serie.latestRequest) return;
-    setUpdating(true);
+    if (!serie.latestRequest) return
+    setUpdating(true)
     try {
-      const res = await fetch("/api/requests/" + serie.latestRequest.id, { method: "DELETE" });
-      if (!res.ok) throw new Error();
-      toast.success("Pedido excluído!");
-      onRefresh();
-      onClose();
+      const res = await fetch('/api/requests/' + serie.latestRequest.id, { method: 'DELETE' })
+      if (!res.ok) throw new Error()
+      toast.success('Pedido excluído!')
+      onRefresh()
+      onClose()
     } catch {
-      toast.error("Erro ao excluir");
+      toast.error('Erro ao excluir')
     } finally {
-      setUpdating(false);
+      setUpdating(false)
     }
   }
 
-  const episodesBySeason = currentEpisodes.reduce<Record<number, number[]>>((acc, ep) => {
-    if (!acc[ep.season]) acc[ep.season] = [];
-    acc[ep.season].push(ep.episode);
-    return acc;
-  }, {});
+  const episodesBySeason = savedEpisodes.reduce<Record<number, number[]>>((acc, ep) => {
+    if (!acc[ep.season]) acc[ep.season] = []
+    acc[ep.season].push(ep.episode)
+    return acc
+  }, {})
 
   function fmtRange(eps: number[]): string {
-    const s = [...eps].sort((a, b) => a - b);
-    const ranges: string[] = [];
-    let start = s[0], end = s[0];
+    const s = [...eps].sort((a, b) => a - b)
+    const ranges: string[] = []
+    let start = s[0], end = s[0]
     for (let i = 1; i < s.length; i++) {
-      if (s[i] === end + 1) { end = s[i]; }
-      else { ranges.push(start === end ? `${start}` : `${start}–${end}`); start = end = s[i]; }
+      if (s[i] === end + 1) { end = s[i] }
+      else { ranges.push(start === end ? `${start}` : `${start}–${end}`); start = end = s[i] }
     }
-    ranges.push(start === end ? `${start}` : `${start}–${end}`);
-    return ranges.join(", ");
+    ranges.push(start === end ? `${start}` : `${start}–${end}`)
+    return ranges.join(', ')
   }
 
-  const rawNotes = serie.latestRequest?.notes?.replace(/\[AUTO\] M3U:/g, "No Servidor:") ?? null;
-  const noteLines = rawNotes ? rawNotes.split("\n") : [];
-  const epLine = noteLines.find(l => /^Temp\s/i.test(l.trim())) ?? null;
-  const obsLine = noteLines.filter(l => !/^Temp\s/i.test(l.trim()) && l.trim()).join(" ") || null;
+  const rawNotes = serie.latestRequest?.notes?.replace(/\[AUTO\] M3U:/g, 'No Servidor:') ?? null
+  const noteLines = rawNotes ? rawNotes.split('\n') : []
+  const epLine = noteLines.find(l => /^Temp\s/i.test(l.trim())) ?? null
+  const obsLine = noteLines.filter(l => !/^Temp\s/i.test(l.trim()) && l.trim()).join(' ') || null
+
+  const isIncompleta = serie.tvStatus === 'FINALIZADA'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex gap-4 p-6">
-          {serie.posterUrl
-            ? <img src={serie.posterUrl} alt={serie.title} className="w-24 h-36 object-cover rounded-lg flex-shrink-0" />
-            : <div className="w-24 h-36 bg-zinc-800 rounded-lg flex-shrink-0" />
-          }
+          {serie.posterUrl ? (
+            <img src={serie.posterUrl} alt={serie.title} className="w-24 h-36 object-cover rounded-lg flex-shrink-0" />
+          ) : (
+            <div className="w-24 h-36 bg-zinc-800 rounded-lg flex-shrink-0" />
+          )}
           <div className="flex-1 min-w-0">
             <h2 className="text-white font-bold text-lg leading-tight">{serie.title}</h2>
-            {serie.tvSeasons && <p className="text-zinc-500 text-xs mt-1">{serie.tvSeasons} temporada{serie.tvSeasons !== 1 ? 's' : ''}</p>}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {serie.tvSeasons && (
+                <p className="text-zinc-500 text-xs">{serie.tvSeasons} temporada{serie.tvSeasons !== 1 ? 's' : ''}</p>
+              )}
+              {isIncompleta ? (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/50 text-amber-400 border border-amber-700/50">
+                  Incompleta
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-900/50 text-blue-400 border border-blue-700/50">
+                  Em Andamento
+                </span>
+              )}
+            </div>
+            {/* Progresso de episódios */}
+            {serie.tvEpisodes && serie.tvEpisodes > 0 && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
+                  <span>{serie.savedEpisodeCount} de {serie.tvEpisodes} eps</span>
+                  <span>{Math.round((serie.savedEpisodeCount / serie.tvEpisodes) * 100)}%</span>
+                </div>
+                <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                  <div
+                    className="bg-orange-500 h-1.5 rounded-full"
+                    style={{ width: `${Math.min(100, (serie.savedEpisodeCount / serie.tvEpisodes) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
             {serie.latestRequest ? (
               <>
-                <span className={"inline-block mt-2 text-white text-xs font-medium px-3 py-1 rounded-full " + (statusColor[serie.latestRequest.status] || "bg-zinc-700")}>
-                  {statusLabel[serie.latestRequest.status] || serie.latestRequest.status}
+                <span
+                  className={
+                    'inline-block mt-2 text-white text-xs font-medium px-3 py-1 rounded-full ' +
+                    (reqStatusColor[serie.latestRequest.status] || 'bg-zinc-700')
+                  }
+                >
+                  Pedido: {reqStatusLabel[serie.latestRequest.status] || serie.latestRequest.status}
                 </span>
-                <div className="mt-3 space-y-1.5 text-sm text-zinc-400">
-                  {serie.latestRequest.audioType && <p>Áudio: {serie.latestRequest.audioType}</p>}
+                <div className="mt-2 space-y-1 text-sm text-zinc-400">
+                  {serie.latestRequest.audioType && <p className="text-xs">Áudio: {serie.latestRequest.audioType}</p>}
                   {epLine && <p className="text-zinc-500 text-xs">{epLine}</p>}
                   {obsLine && (
                     <div className="flex items-start gap-1.5 mt-1 bg-zinc-800/60 rounded-lg px-2.5 py-1.5">
@@ -349,8 +534,8 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
                       <p className="text-xs text-yellow-200/80 leading-relaxed">{obsLine}</p>
                     </div>
                   )}
-                  <p className="text-xs text-zinc-500 mt-1">
-                    {new Date(serie.latestRequest.createdAt).toLocaleDateString("pt-BR")} por {serie.latestRequest.createdBy.name}
+                  <p className="text-xs text-zinc-600">
+                    {new Date(serie.latestRequest.createdAt).toLocaleDateString('pt-BR')} por {serie.latestRequest.createdBy.name}
                   </p>
                 </div>
               </>
@@ -362,24 +547,28 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
           </div>
         </div>
 
-        {/* Episodes display */}
+        {/* Episódios salvos — resumo */}
         <div className="px-6 pb-4 border-t border-zinc-700 pt-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">No Servidor</p>
-            {!loadingEpisodes && currentEpisodes.length > 0 && (
-              <span className="text-xs text-zinc-500">{Object.keys(episodesBySeason).length} temp · {currentEpisodes.length} eps</span>
+            {!loadingEpisodes && savedEpisodes.length > 0 && (
+              <span className="text-xs text-zinc-500">
+                {Object.keys(episodesBySeason).length} temp · {savedEpisodes.length} eps
+              </span>
             )}
           </div>
           {loadingEpisodes ? (
-            <p className="text-xs text-zinc-600 animate-pulse">Carregando...</p>
-          ) : currentEpisodes.length === 0 ? (
+            <p className="text-xs text-zinc-600 animate-pulse">Consultando TMDB...</p>
+          ) : savedEpisodes.length === 0 ? (
             <p className="text-xs text-zinc-600 italic">Nenhum episódio registrado</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(episodesBySeason)
                 .sort(([a], [b]) => parseInt(a) - parseInt(b))
                 .map(([season, eps]) => (
-                  <span key={season} title={`Temporada ${season}: eps ${fmtRange(eps)}`}
+                  <span
+                    key={season}
+                    title={`Temporada ${season}: eps ${fmtRange(eps)}`}
                     className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-800 border border-zinc-700 text-xs"
                   >
                     <span className="text-zinc-400 font-semibold">T{season}</span>
@@ -390,77 +579,125 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
           )}
         </div>
 
-        {/* Update form */}
+        {/* Formulário de atualização */}
         {showUpdateForm && (
-          <div className="px-6 pb-4 border-t border-zinc-700 pt-4 space-y-3">
-            <p className="text-sm font-semibold text-white mb-2">Registrar Atualização</p>
-            {(Object.keys(tmdbSeasons).length > 0 || currentEpisodes.length > 0) && (
+          <div className="px-6 pb-4 border-t border-zinc-700 pt-4 space-y-4">
+            <p className="text-sm font-semibold text-white">Registrar Atualização</p>
+
+            {(Object.keys(tmdbSeasons).length > 0 || savedEpisodes.length > 0) && (
               <div>
-                <label className="text-xs text-zinc-400 block mb-2">Episódios disponíveis</label>
+                <label className="text-xs text-zinc-400 block mb-2">
+                  Episódios
+                  <span className="ml-2 text-zinc-600 font-normal">
+                    (laranja = já no servidor · verde = adicionando)
+                  </span>
+                </label>
                 <EpisodeGrid
-                  savedEpisodes={currentEpisodes}
+                  savedEpisodes={savedEpisodes}
                   tmdbSeasons={tmdbSeasons}
-                  selectedEpisodes={selectedEpisodes}
-                  onToggle={toggleEpisode}
-                  onSelectAll={selectAllInSeason}
-                  onClear={clearSeason}
+                  selectedNew={selectedNew}
+                  onToggleNew={toggleNew}
+                  onSelectAllNew={selectAllNew}
+                  onClearNew={clearNew}
                   selectedSeason={selectedSeason}
                   onSeasonChange={setSelectedSeason}
+                  manualSeasonCounts={manualSeasonCounts}
+                  onManualCount={(season, count) =>
+                    setManualSeasonCounts(prev => ({ ...prev, [season]: count }))
+                  }
                 />
               </div>
             )}
+
             <div>
               <label className="text-xs text-zinc-400 block mb-1">Tipo de Áudio</label>
               <div className="flex flex-wrap gap-2">
-                {["DUBLADO", "LEGENDADO", "DUBLADO_LEGENDADO"].map((a) => (
-                  <button key={a} onClick={() => setAudio(a)}
-                    className={"px-3 py-1.5 rounded-lg text-xs font-medium transition " + (audio === a ? "bg-orange-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                {['DUBLADO', 'LEGENDADO', 'DUBLADO_LEGENDADO'].map(a => (
+                  <button
+                    key={a}
+                    onClick={() => setAudio(a)}
+                    className={
+                      'px-3 py-1.5 rounded-lg text-xs font-medium transition ' +
+                      (audio === a ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700')
+                    }
                   >
-                    {a === "DUBLADO" ? "Dublado" : a === "LEGENDADO" ? "Legendado" : "Dub+Leg"}
+                    {a === 'DUBLADO' ? 'Dublado' : a === 'LEGENDADO' ? 'Legendado' : 'Dub+Leg'}
                   </button>
                 ))}
               </div>
             </div>
+
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="finalizada" checked={seriesFinalizada} onChange={e => setSeriesFinalizada(e.target.checked)} className="w-4 h-4 accent-orange-500" />
-              <label htmlFor="finalizada" className="text-sm text-zinc-300 cursor-pointer">Série completa no servidor</label>
+              <input
+                type="checkbox"
+                id="finalizada"
+                checked={seriesFinalizada}
+                onChange={e => setSeriesFinalizada(e.target.checked)}
+                className="w-4 h-4 accent-orange-500"
+              />
+              <label htmlFor="finalizada" className="text-sm text-zinc-300 cursor-pointer">
+                Série completa no servidor (marca como Finalizada)
+              </label>
             </div>
+
             <div>
-              <label className="text-xs text-zinc-400 block mb-1">Observação <span className="text-zinc-600">(opcional)</span></label>
+              <label className="text-xs text-zinc-400 block mb-1">
+                Observação <span className="text-zinc-600">(opcional)</span>
+              </label>
               <textarea
                 value={obs}
                 onChange={e => setObs(e.target.value)}
                 placeholder="Ex: Eps 05 a 09 estão legendados"
                 rows={2}
                 className="w-full rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50 resize-none"
-                style={{ backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a" }}
+                style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
               />
             </div>
-            <div className="flex gap-2 mt-2">
-              <button onClick={() => setShowUpdateForm(false)} className="flex-1 py-2 rounded-lg text-sm text-zinc-400 border border-zinc-700 hover:bg-zinc-800 transition">Cancelar</button>
-              <button onClick={handleSaveUpdate} disabled={updating} className="flex-1 py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition disabled:opacity-50">
-                {updating ? "Salvando..." : "Salvar"}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowUpdateForm(false)}
+                className="flex-1 py-2 rounded-lg text-sm text-zinc-400 border border-zinc-700 hover:bg-zinc-800 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveUpdate}
+                disabled={updating}
+                className="flex-1 py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition disabled:opacity-50"
+              >
+                {updating ? 'Salvando...' : hasNewEpisodes ? `Salvar (+${totalNewEps} eps)` : 'Salvar'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Actions */}
+        {/* Ações */}
         {!showUpdateForm && (
           <div className="px-6 pb-4">
-            <button onClick={() => setShowUpdateForm(true)} className="w-full py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition mb-3">
+            <button
+              onClick={() => setShowUpdateForm(true)}
+              className="w-full py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition mb-3"
+            >
               Registrar Atualização
             </button>
             {serie.latestRequest && canEdit && (
               <>
-                <p className="text-zinc-500 text-xs mb-2">Alterar status:</p>
+                <p className="text-zinc-500 text-xs mb-2">Alterar status do pedido:</p>
                 <div className="flex gap-2 flex-wrap">
-                  {["ABERTO", "EM_ANDAMENTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"].map((s) => (
-                    <button key={s} onClick={() => handleStatusChange(s)}
+                  {['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
                       disabled={updating || serie.latestRequest?.status === s}
-                      className={"px-3 py-1.5 rounded-full text-xs font-medium transition disabled:opacity-40 " + (serie.latestRequest?.status === s ? (statusColor[s] + " text-white") : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                      className={
+                        'px-3 py-1.5 rounded-full text-xs font-medium transition disabled:opacity-40 ' +
+                        (serie.latestRequest?.status === s
+                          ? reqStatusColor[s] + ' text-white'
+                          : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700')
+                      }
                     >
-                      {statusLabel[s]}
+                      {reqStatusLabel[s]}
                     </button>
                   ))}
                 </div>
@@ -469,163 +706,230 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
           </div>
         )}
 
-        {/* Footer */}
+        {/* Rodapé */}
         <div className="px-6 pb-6 flex justify-between">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition"
+          >
             Fechar
           </button>
-          {serie.latestRequest && canEdit && (
-            confirmDelete ? (
+          {serie.latestRequest && canEdit &&
+            (confirmDelete ? (
               <div className="flex gap-2">
-                <button onClick={() => setConfirmDelete(false)} className="px-3 py-1.5 rounded-lg text-xs border border-zinc-700 text-zinc-400">Cancelar</button>
-                <button onClick={handleDeleteRequest} className="px-3 py-1.5 rounded-lg text-xs bg-red-600 text-white hover:bg-red-500">Confirmar</button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs border border-zinc-700 text-zinc-400"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteRequest}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-red-600 text-white hover:bg-red-500"
+                >
+                  Confirmar
+                </button>
               </div>
             ) : (
-              <button onClick={() => setConfirmDelete(true)} className="px-4 py-2 rounded-lg text-sm bg-red-600/20 text-red-400 hover:bg-red-600/40 transition">
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="px-4 py-2 rounded-lg text-sm bg-red-600/20 text-red-400 hover:bg-red-600/40 transition"
+              >
                 Excluir pedido
               </button>
-            )
-          )}
+            ))}
         </div>
       </div>
     </div>
-  );
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AtualizacoesPage
+// ────────────────────────────────────────────────────────────────────────────
+const FILTERS = [
+  { key: '', label: 'Todas' },
+  { key: 'EM_ANDAMENTO', label: 'Em Andamento' },
+  { key: 'INCOMPLETAS', label: 'Incompletas' },
+  { key: 'SEM_PEDIDO', label: 'Sem Pedido' },
+]
+
+const filterDesc: Record<string, string> = {
+  '': 'séries em andamento e incompletas',
+  EM_ANDAMENTO: 'séries em andamento',
+  INCOMPLETAS: 'séries incompletas (finalizadas no TMDB)',
+  SEM_PEDIDO: 'séries sem pedido de atualização',
 }
 
 export default function AtualizacoesPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const [series, setSeries] = useState<SerieCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<SerieCard | null>(null);
-  const [filtroStatus, setFiltroStatus] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState("");
-  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '');
-  const userId = session?.user?.id || "";
+  const { data: session } = useSession()
+  const [series, setSeries] = useState<SerieCard[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<SerieCard | null>(null)
+  const [filtroStatus, setFiltroStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [search, setSearch] = useState('')
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
+  const userId = session?.user?.id || ''
 
   const fetchSeries = useCallback(() => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: page.toString(), limit: "20" });
-    if (filtroStatus) params.append("status", filtroStatus);
-    if (search) params.append("search", search);
-    fetch("/api/atualizacoes?" + params.toString())
-      .then((r) => r.json())
-      .then((d) => {
-        setSeries(d.series || []);
-        setTotal(d.total || 0);
-        setTotalPages(d.pages || 1);
+    setLoading(true)
+    const params = new URLSearchParams({ page: page.toString(), limit: '20' })
+    if (filtroStatus) params.append('status', filtroStatus)
+    if (search) params.append('search', search)
+    fetch('/api/atualizacoes?' + params.toString())
+      .then(r => r.json())
+      .then(d => {
+        setSeries(d.series || [])
+        setTotal(d.total || 0)
+        setTotalPages(d.pages || 1)
       })
-      .catch(() => toast.error("Erro ao carregar"))
-      .finally(() => setLoading(false));
-  }, [filtroStatus, page, search]);
+      .catch(() => toast.error('Erro ao carregar'))
+      .finally(() => setLoading(false))
+  }, [filtroStatus, page, search])
 
-  useEffect(() => { fetchSeries(); }, [fetchSeries]);
-
-  const filters = [
-    { key: "", label: "Todos" },
-    { key: "SEM_PEDIDO", label: "Sem pedido" },
-    { key: "ABERTO", label: "Aberto" },
-    { key: "EM_ANDAMENTO", label: "Em Andamento" },
-    { key: "EM_PROGRESSO", label: "Em Progresso" },
-    { key: "CONCLUIDO", label: "Concluído" },
-    { key: "REJEITADO", label: "Rejeitado" },
-  ];
+  useEffect(() => { fetchSeries() }, [fetchSeries])
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Atualizações de Séries</h1>
-          <p className="text-zinc-400 text-sm mt-1">{total} série{total !== 1 ? "s" : ""} em andamento na biblioteca</p>
-        </div>
-        <button onClick={() => router.push("/dashboard/atualizacoes/new")} className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-          + Nova Atualização
-        </button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Atualizações de Séries</h1>
+        <p className="text-zinc-400 text-sm mt-1">
+          {total} {filterDesc[filtroStatus] || 'resultados'}
+        </p>
       </div>
 
+      {/* Busca */}
       <div className="relative mb-4">
         <input
           value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
           placeholder="Buscar série..."
-          className="w-full rounded-lg px-4 py-2.5 pl-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-          style={{ backgroundColor: "#1a1a1a", border: "1px solid #2a2a2a" }}
+          className="w-full rounded-lg px-4 py-2.5 pl-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+          style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
         />
         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </div>
 
-      <div className="flex gap-2 flex-wrap mb-6">
-        {filters.map(({ key, label }) => (
-          <button key={key} onClick={() => { setFiltroStatus(key); setPage(1); }}
-            className={"px-4 py-1.5 rounded-full text-sm font-medium transition border " + (filtroStatus === key ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {FILTERS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => { setFiltroStatus(key); setPage(1) }}
+            className={
+              'px-4 py-1.5 rounded-full text-sm font-medium transition border ' +
+              (filtroStatus === key
+                ? 'bg-orange-500 border-orange-500 text-white'
+                : 'border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500')
+            }
           >
             {label}
           </button>
         ))}
       </div>
 
+      {/* Lista */}
       {loading ? (
         <div className="text-center py-16 text-zinc-400">Carregando...</div>
       ) : series.length === 0 ? (
         <div className="text-center py-16 text-zinc-400">Nenhuma série encontrada.</div>
       ) : (
-        <div className="space-y-3">
-          {series.map((s) => (
-            <div key={s.id} onClick={() => setSelected(s)}
-              className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition"
-            >
-              {s.posterUrl
-                ? <img src={s.posterUrl} alt={s.title} className="w-12 h-16 object-cover rounded-lg flex-shrink-0" />
-                : <div className="w-12 h-16 bg-zinc-800 rounded-lg flex-shrink-0" />
-              }
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-semibold">{s.title}</p>
-                <div className="flex items-center gap-3 mt-1 flex-wrap">
-                  {s.tvSeasons && <span className="text-zinc-400 text-xs">{s.tvSeasons} temp</span>}
-                  {s.latestRequest?.audioType && <span className="text-zinc-400 text-xs">{s.latestRequest.audioType}</span>}
-                  {s.latestRequest && (
-                    <span className="text-zinc-500 text-xs">
-                      {new Date(s.latestRequest.createdAt).toLocaleDateString("pt-BR")} · {s.latestRequest.createdBy.name}
-                    </span>
+        <div className="space-y-2">
+          {series.map(s => {
+            const isIncompleta = s.tvStatus === 'FINALIZADA'
+            return (
+              <div
+                key={s.id}
+                onClick={() => setSelected(s)}
+                className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition"
+              >
+                {s.posterUrl ? (
+                  <img src={s.posterUrl} alt={s.title} className="w-12 h-16 object-cover rounded-lg flex-shrink-0" />
+                ) : (
+                  <div className="w-12 h-16 bg-zinc-800 rounded-lg flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white font-semibold">{s.title}</p>
+                    {isIncompleta ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-900/50 text-amber-400 border border-amber-700/50 shrink-0">
+                        Incompleta
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-900/50 text-blue-400 border border-blue-700/50 shrink-0">
+                        Em Andamento
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    {s.tvSeasons && <span className="text-zinc-500 text-xs">{s.tvSeasons} temp</span>}
+                    {s.tvEpisodes && s.tvEpisodes > 0 ? (
+                      <span className="text-zinc-500 text-xs">{s.savedEpisodeCount}/{s.tvEpisodes} eps</span>
+                    ) : s.savedEpisodeCount > 0 ? (
+                      <span className="text-zinc-500 text-xs">{s.savedEpisodeCount} eps</span>
+                    ) : null}
+                    {s.latestRequest?.audioType && (
+                      <span className="text-zinc-500 text-xs">{s.latestRequest.audioType}</span>
+                    )}
+                    {s.latestRequest && (
+                      <span className="text-zinc-600 text-xs">
+                        {new Date(s.latestRequest.createdAt).toLocaleDateString('pt-BR')} · {s.latestRequest.createdBy.name}
+                      </span>
+                    )}
+                  </div>
+                  {/* Barra de progresso para INCOMPLETAS */}
+                  {isIncompleta && s.tvEpisodes && s.tvEpisodes > 0 && (
+                    <div className="mt-1.5 w-48 bg-zinc-800 rounded-full h-1">
+                      <div
+                        className="bg-orange-500 h-1 rounded-full"
+                        style={{ width: `${Math.min(100, (s.savedEpisodeCount / s.tvEpisodes) * 100)}%` }}
+                      />
+                    </div>
                   )}
                 </div>
-                {s.latestRequest?.notes && (() => {
-                  const lines = s.latestRequest!.notes!.replace(/\[AUTO\] M3U:/g, "No Servidor:").split("\n");
-                  const ep = lines.find(l => /^Temp\s/i.test(l.trim()));
-                  const ob = lines.filter(l => !/^Temp\s/i.test(l.trim()) && l.trim()).join(" ");
-                  return (
-                    <div className="mt-1 space-y-0.5">
-                      {ep && <p className="text-zinc-500 text-xs line-clamp-1">{ep}</p>}
-                      {ob && (
-                        <p className="text-yellow-500/70 text-xs line-clamp-1 flex items-center gap-1">
-                          <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-                          {ob}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })()}
+                <span
+                  className={
+                    'text-white text-xs font-medium px-3 py-1 rounded-full flex-shrink-0 ' +
+                    (s.latestRequest
+                      ? reqStatusColor[s.latestRequest.status] || 'bg-zinc-700'
+                      : 'bg-zinc-800 text-zinc-400')
+                  }
+                >
+                  {s.latestRequest
+                    ? reqStatusLabel[s.latestRequest.status] || s.latestRequest.status
+                    : 'Sem pedido'}
+                </span>
               </div>
-              <span className={"text-white text-xs font-medium px-3 py-1 rounded-full flex-shrink-0 " + (s.latestRequest ? (statusColor[s.latestRequest.status] || "bg-zinc-700") : "bg-zinc-800 text-zinc-400")}>
-                {s.latestRequest ? (statusLabel[s.latestRequest.status] || s.latestRequest.status) : "Sem pedido"}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
+      {/* Paginação */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-6">
           <p className="text-sm text-zinc-400">{total} séries no total</p>
           <div className="flex gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 disabled:opacity-40 transition">Anterior</button>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 disabled:opacity-40 transition"
+            >
+              Anterior
+            </button>
             <span className="px-4 py-2 text-sm text-zinc-400">{page} / {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 disabled:opacity-40 transition">Próxima</button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-4 py-2 rounded-lg text-sm border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 disabled:opacity-40 transition"
+            >
+              Próxima
+            </button>
           </div>
         </div>
       )}
@@ -640,5 +944,5 @@ export default function AtualizacoesPage() {
         />
       )}
     </div>
-  );
+  )
 }

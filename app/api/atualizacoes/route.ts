@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
-import { Prisma, RequestStatus } from '@prisma/client'
+import { Prisma } from '@prisma/client'
+
+async function getIncompleteIds(): Promise<string[]> {
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT t.id FROM "Title" t
+    LEFT JOIN (
+      SELECT "titleId", COUNT(*)::int AS cnt FROM "TitleEpisode" GROUP BY "titleId"
+    ) e ON e."titleId" = t.id
+    WHERE t.type = 'TV'
+    AND t."tvStatus" = 'FINALIZADA'
+    AND (
+      (t."tvEpisodes" IS NOT NULL AND t."tvEpisodes" > 0 AND COALESCE(e.cnt, 0) < t."tvEpisodes")
+      OR COALESCE(e.cnt, 0) = 0
+    )
+  `
+  return rows.map(r => r.id)
+}
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
@@ -14,23 +30,37 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
-  const where: Prisma.TitleWhereInput = { type: 'TV', tvStatus: 'EM_ANDAMENTO' }
+  const isSemPedido = statusFilter === 'SEM_PEDIDO'
+  const needsIncomplete = !statusFilter || statusFilter === 'INCOMPLETAS' || isSemPedido
+
+  const incompleteIds = needsIncomplete ? await getIncompleteIds() : []
+
+  const conditions: Prisma.TitleWhereInput[] = [{ type: 'TV' }]
 
   if (search) {
     const matches = await prisma.$queryRaw<{ id: string }[]>`
       SELECT id FROM "Title"
-      WHERE type = 'TV' AND "tvStatus" = 'EM_ANDAMENTO'
+      WHERE type = 'TV'
         AND unaccent(lower(title)) LIKE unaccent(lower(${`%${search}%`}))
       LIMIT 100
     `
-    where.id = { in: matches.map(r => r.id) }
+    conditions.push({ id: { in: matches.map(r => r.id) } })
   }
 
-  if (statusFilter === 'SEM_PEDIDO') {
-    where.requests = { none: { isUpdate: true } }
-  } else if (statusFilter) {
-    where.requests = { some: { isUpdate: true, status: statusFilter as RequestStatus } }
+  if (statusFilter === 'EM_ANDAMENTO') {
+    conditions.push({ tvStatus: 'EM_ANDAMENTO' })
+  } else if (statusFilter === 'INCOMPLETAS') {
+    conditions.push({ id: { in: incompleteIds } })
+  } else {
+    // Default ou SEM_PEDIDO: EM_ANDAMENTO + INCOMPLETAS
+    conditions.push({ OR: [{ tvStatus: 'EM_ANDAMENTO' }, { id: { in: incompleteIds } }] })
   }
+
+  if (isSemPedido) {
+    conditions.push({ requests: { none: { isUpdate: true } } })
+  }
+
+  const where: Prisma.TitleWhereInput = conditions.length === 1 ? conditions[0] : { AND: conditions }
 
   const [total, titles] = await Promise.all([
     prisma.title.count({ where }),
@@ -44,7 +74,10 @@ export async function GET(req: NextRequest) {
         title: true,
         posterUrl: true,
         tvSeasons: true,
+        tvEpisodes: true,
+        tvStatus: true,
         tmdbId: true,
+        _count: { select: { episodes: true } },
         requests: {
           where: { isUpdate: true },
           orderBy: { createdAt: 'desc' },
@@ -64,8 +97,9 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  const series = titles.map(({ requests, ...t }) => ({
+  const series = titles.map(({ requests, _count, ...t }) => ({
     ...t,
+    savedEpisodeCount: _count.episodes,
     latestRequest: requests[0] ?? null,
   }))
 
