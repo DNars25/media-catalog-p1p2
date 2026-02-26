@@ -2,18 +2,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { BarChart2, Download, Loader2, TrendingUp, AlertTriangle, RefreshCw, Film } from 'lucide-react'
 import type { AnalyticsData, Period } from '@/lib/analytics'
-
-const UserBarChart = dynamic(
-  () => import('./analytics-charts').then(m => m.UserBarChart),
-  { ssr: false, loading: () => <div className='h-[280px] flex items-center justify-center text-muted-foreground text-sm'>Carregando gráfico...</div> }
-)
-const MonthlyLineChart = dynamic(
-  () => import('./analytics-charts').then(m => m.MonthlyLineChart),
-  { ssr: false, loading: () => <div className='h-[280px] flex items-center justify-center text-muted-foreground text-sm'>Carregando gráfico...</div> }
-)
+import { UserBarChart, MonthlyLineChart } from './analytics-charts'
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: '30d', label: '30 dias' },
