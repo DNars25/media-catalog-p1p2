@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
-import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database } from 'lucide-react'
+import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database, BarChart2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/dashboard/tmdb', icon: Database, label: 'TMDB · Capa+Data' },
 ]
 const adminItems = [
+  { href: '/dashboard/analytics', icon: BarChart2, label: 'Analytics' },
   { href: '/dashboard/users', icon: Users, label: 'Usuários' },
   { href: '/dashboard/settings', icon: Settings, label: 'Configurações' },
 ]
