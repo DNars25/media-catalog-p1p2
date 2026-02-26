@@ -142,7 +142,7 @@ function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | nul
 
 export default function RequestsPage() {
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
   const [requests, setRequests] = useState<Request[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)

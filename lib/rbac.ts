@@ -13,7 +13,16 @@ export async function requireAuth() {
 export async function requireAdmin() {
   const { error, session } = await requireAuth()
   if (error) return { error, session: null }
-  if (session!.user.role !== 'ADMIN') {
+  if (!['ADMIN', 'SUPER_ADMIN'].includes(session!.user.role)) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null }
+  }
+  return { error: null, session }
+}
+
+export async function requireSuperAdmin() {
+  const { error, session } = await requireAuth()
+  if (error) return { error, session: null }
+  if (session!.user.role !== 'SUPER_ADMIN') {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }), session: null }
   }
   return { error: null, session }

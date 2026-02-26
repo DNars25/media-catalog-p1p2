@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/utils'
 interface User {
   id: string
   name: string
+  username: string | null
   email: string
   role: string
   createdAt: string
@@ -18,7 +19,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'USER' })
+  const [form, setForm] = useState({ name: '', username: '', email: '', password: '', role: 'USER' })
   const [formLoading, setFormLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
@@ -32,7 +33,7 @@ export default function UsersPage() {
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
   const handleCreate = async () => {
-    if (!form.name || !form.email || !form.password) { toast.error('Preencha todos os campos'); return }
+    if (!form.name || !form.username || !form.email || !form.password) { toast.error('Preencha todos os campos'); return }
     setFormLoading(true)
     const res = await fetch('/api/users', {
       method: 'POST',
@@ -43,7 +44,7 @@ export default function UsersPage() {
     if (res.ok) {
       toast.success('Usuário criado!')
       setShowForm(false)
-      setForm({ name: '', email: '', password: '', role: 'USER' })
+      setForm({ name: '', username: '', email: '', password: '', role: 'USER' })
       fetchUsers()
     } else {
       const err = await res.json()
@@ -90,7 +91,8 @@ export default function UsersPage() {
           <thead>
             <tr className="border-b border-border">
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nome</th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Email</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Usuário</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Email</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Criado em</th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>
@@ -98,7 +100,7 @@ export default function UsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              <tr><td colSpan={6} className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
@@ -110,7 +112,8 @@ export default function UsersPage() {
                       <span className="font-medium text-sm">{u.name}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground hidden sm:table-cell">{u.email}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground hidden sm:table-cell">{u.username ?? '—'}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground hidden lg:table-cell">{u.email}</td>
                   <td className="py-3 px-4">
                     <select
                       value={u.role}
@@ -119,6 +122,7 @@ export default function UsersPage() {
                     >
                       <option value="USER">USER</option>
                       <option value="ADMIN">ADMIN</option>
+                      <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                     </select>
                   </td>
                   <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">{formatDate(u.createdAt)}</td>
@@ -150,6 +154,7 @@ export default function UsersPage() {
             <div className="space-y-4">
               {[
                 { label: 'Nome', key: 'name', type: 'text', placeholder: 'Nome completo' },
+                { label: 'Usuário', key: 'username', type: 'text', placeholder: 'nome_de_usuario' },
                 { label: 'Email', key: 'email', type: 'email', placeholder: 'email@exemplo.com' },
                 { label: 'Senha', key: 'password', type: 'password', placeholder: '••••••••' },
               ].map((field) => (
@@ -174,6 +179,7 @@ export default function UsersPage() {
                 >
                   <option value="USER">User</option>
                   <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
                 </select>
               </div>
             </div>

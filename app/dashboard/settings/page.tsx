@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [backfilling, setBackfilling] = useState(false)
   const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(null)
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
 
   async function handleBackfill() {
     setBackfilling(true)

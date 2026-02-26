@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (error) return error
   const existing = await prisma.request.findUnique({ where: { id: params.id } })
   if (!existing) return NextResponse.json({ error: "Nao encontrado" }, { status: 404 })
-  const isAdmin = session!.user.role === "ADMIN"
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session!.user.role)
   const isOwner = existing.createdById === session!.user.id
   if (!isAdmin && !isOwner) return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
   const body = await req.json()
@@ -49,7 +49,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   if (error) return error
   const existing = await prisma.request.findUnique({ where: { id: params.id } })
   if (!existing) return NextResponse.json({ error: "Nao encontrado" }, { status: 404 })
-  const isAdmin = session!.user.role === "ADMIN"
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session!.user.role)
   const isOwner = existing.createdById === session!.user.id
   if (!isAdmin && !isOwner) return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
   await prisma.request.delete({ where: { id: params.id } })

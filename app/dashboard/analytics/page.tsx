@@ -61,7 +61,7 @@ function StatCard({ icon, label, value, sub, colorClass, variation }: {
 export default function AnalyticsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
 
   const [period, setPeriod] = useState<Period>('30d')
   const [userId, setUserId] = useState('')

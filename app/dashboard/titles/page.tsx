@@ -34,7 +34,7 @@ interface Title {
 
 export default function TitlesPage() {
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
 
   const [titles, setTitles] = useState<Title[]>([])
   const [total, setTotal] = useState(0)

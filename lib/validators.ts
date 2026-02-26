@@ -51,13 +51,14 @@ export const RequestUpdateSchema = z.object({
 
 export const UserCreateSchema = z.object({
   name: z.string().min(1),
+  username: z.string().min(3, 'Mínimo 3 caracteres'),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.enum(['ADMIN', 'USER']).default('USER'),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'USER']).default('USER'),
 })
 
 export const UserUpdateSchema = z.object({
   name: z.string().min(1).optional(),
-  role: z.enum(['ADMIN', 'USER']).optional(),
+  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'USER']).optional(),
   password: z.string().min(6).optional(),
 })

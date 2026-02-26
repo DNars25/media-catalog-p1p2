@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAdmin } from '@/lib/rbac'
+import { requireSuperAdmin } from '@/lib/rbac'
 
 export async function GET(req: NextRequest) {
-  const { error } = await requireAdmin()
+  const { error } = await requireSuperAdmin()
   if (error) return error
 
   const sp = req.nextUrl.searchParams

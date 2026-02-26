@@ -173,7 +173,7 @@ function CorrectionCard({ c, isAdmin, userId, onStatusChange, onDelete }: {
 
 export default function CorrecoesPage() {
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
   const userId = session?.user?.id || ''
   const [corrections, setCorrections] = useState<Correction[]>([])
   const [loading, setLoading] = useState(true)

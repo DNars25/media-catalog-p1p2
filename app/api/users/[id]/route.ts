@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAdmin } from '@/lib/rbac'
+import { requireSuperAdmin } from '@/lib/rbac'
 import { UserUpdateSchema } from '@/lib/validators'
 import bcrypt from 'bcryptjs'
 import { logAudit } from '@/lib/audit'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error, session } = await requireAdmin()
+  const { error, session } = await requireSuperAdmin()
   if (error) return error
 
   const body = await req.json()
@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const { password, ...rest } = parsed.data
-  const data: { name?: string; role?: 'ADMIN' | 'USER'; passwordHash?: string } = { ...rest }
+  const data: { name?: string; role?: 'SUPER_ADMIN' | 'ADMIN' | 'USER'; passwordHash?: string } = { ...rest }
   if (password) {
     data.passwordHash = await bcrypt.hash(password, 12)
   }
@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error, session } = await requireAdmin()
+  const { error, session } = await requireSuperAdmin()
   if (error) return error
 
   const existing = await prisma.user.findUnique({

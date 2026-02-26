@@ -18,14 +18,17 @@ const navItems = [
 ]
 const adminItems = [
   { href: '/dashboard/analytics', icon: BarChart2, label: 'Analytics' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Configurações' },
+]
+const superAdminItems = [
   { href: '/dashboard/users', icon: Users, label: 'Usuários' },
   { href: '/dashboard/admin/audit', icon: ClipboardCheck, label: 'Audit Log' },
-  { href: '/dashboard/settings', icon: Settings, label: 'Configurações' },
 ]
 export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   useEffect(() => {
@@ -55,6 +58,15 @@ export function Sidebar() {
         <>
           <div className='pt-3 pb-1'><p className='text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3'>Admin</p></div>
           {adminItems.map((item) => {
+            const active = (pathname || '').startsWith(item.href)
+            return (
+              <Link key={item.href} href={item.href} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all', active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary')}>
+                <item.icon className='w-4 h-4 shrink-0' />
+                {item.label}
+              </Link>
+            )
+          })}
+          {isSuperAdmin && superAdminItems.map((item) => {
             const active = (pathname || '').startsWith(item.href)
             return (
               <Link key={item.href} href={item.href} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all', active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary')}>
