@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, Trash2, Loader2, X } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, Pencil } from 'lucide-react'
 import { Badge } from '@/components/badges'
 import { formatDate } from '@/lib/utils'
 
@@ -21,6 +21,9 @@ export default function UsersPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: '', username: '', email: '', password: '', role: 'USER' })
   const [formLoading, setFormLoading] = useState(false)
+  const [editUser, setEditUser] = useState<User | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', email: '', password: '' })
+  const [editLoading, setEditLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -67,6 +70,33 @@ export default function UsersPage() {
     const res = await fetch(`/api/users/${id}`, { method: 'DELETE' })
     if (res.ok) { toast.success('Usuário excluído'); fetchUsers() }
     else toast.error('Erro ao excluir')
+  }
+
+  const openEdit = (u: User) => {
+    setEditUser(u)
+    setEditForm({ name: u.name, email: u.email, password: '' })
+  }
+
+  const handleEditSave = async () => {
+    if (!editUser) return
+    if (!editForm.name || !editForm.email) { toast.error('Nome e email são obrigatórios'); return }
+    setEditLoading(true)
+    const body: Record<string, string> = { name: editForm.name, email: editForm.email }
+    if (editForm.password) body.password = editForm.password
+    const res = await fetch(`/api/users/${editUser.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    setEditLoading(false)
+    if (res.ok) {
+      toast.success('Usuário atualizado!')
+      setEditUser(null)
+      fetchUsers()
+    } else {
+      const err = await res.json()
+      toast.error(res.status === 409 ? 'Email já existe' : 'Erro ao atualizar')
+    }
   }
 
   return (
@@ -127,12 +157,22 @@ export default function UsersPage() {
                   </td>
                   <td className="py-3 px-4 text-sm text-muted-foreground hidden md:table-cell">{formatDate(u.createdAt)}</td>
                   <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => handleDelete(u.id)}
-                      className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEdit(u)}
+                        className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(u.id)}
+                        className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -141,6 +181,49 @@ export default function UsersPage() {
         </table>
         </div>
       </div>
+
+      {/* Edit user modal */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setEditUser(null)}>
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Editar Usuário</h2>
+              <button onClick={() => setEditUser(null)} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"><X className="w-4 h-4" /></button>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { label: 'Nome', key: 'name', type: 'text', placeholder: 'Nome completo' },
+                { label: 'Email', key: 'email', type: 'email', placeholder: 'email@exemplo.com' },
+                { label: 'Nova Senha', key: 'password', type: 'password', placeholder: 'Deixe em branco para manter' },
+              ].map((field) => (
+                <div key={field.key}>
+                  <label className="text-sm font-medium text-muted-foreground block mb-1.5">{field.label}</label>
+                  <input
+                    type={field.type}
+                    value={(editForm as any)[field.key]}
+                    onChange={(e) => setEditForm({ ...editForm, [field.key]: e.target.value })}
+                    placeholder={field.placeholder}
+                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditUser(null)} className="flex-1 py-2 rounded-lg border border-border hover:bg-secondary text-sm transition-colors">Cancelar</button>
+              <button
+                onClick={handleEditSave}
+                disabled={editLoading}
+                className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+              >
+                {editLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create user modal */}
       {showForm && (

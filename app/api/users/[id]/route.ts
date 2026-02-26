@@ -19,8 +19,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { password, ...rest } = parsed.data
-  const data: { name?: string; role?: 'SUPER_ADMIN' | 'ADMIN' | 'USER'; passwordHash?: string } = { ...rest }
+  const { password, email, ...rest } = parsed.data
+  const data: { name?: string; email?: string; role?: 'SUPER_ADMIN' | 'ADMIN' | 'USER'; passwordHash?: string } = { ...rest }
+  if (email && email !== existing.email) {
+    const emailTaken = await prisma.user.findUnique({ where: { email } })
+    if (emailTaken) return NextResponse.json({ error: 'Email already exists' }, { status: 409 })
+    data.email = email
+  }
   if (password) {
     data.passwordHash = await bcrypt.hash(password, 12)
   }
