@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [backfilling, setBackfilling] = useState(false)
   const [backfillResult, setBackfillResult] = useState<BackfillResult | null>(null)
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
 
   async function handleBackfill() {
     setBackfilling(true)
@@ -127,7 +128,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {isAdmin && (
+      {isSuperAdmin && (
         <div className="mt-6 bg-card border border-border rounded-xl p-6">
           <div className="flex items-center gap-3 mb-1">
             <DatabaseZap className="w-5 h-5 text-primary" />

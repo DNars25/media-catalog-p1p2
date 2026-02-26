@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAdmin } from '@/lib/rbac'
+import { requireSuperAdmin } from '@/lib/rbac'
 import { getTMDBDetails } from '@/lib/tmdb'
 
 export async function POST(req: NextRequest) {
-  const { error } = await requireAdmin()
+  const { error } = await requireSuperAdmin()
   if (error) return error
 
   // Buscar todos os títulos TV que ainda não têm nenhum TitleEpisode
