@@ -46,6 +46,7 @@ const statusLabel: Record<string, string> = {
 
 function EpisodeGrid({
   savedEpisodes, tmdbSeasons, selectedEpisodes, onToggle, onSelectAll, onClear, selectedSeason, onSeasonChange,
+  manualSeasonCounts, onManualCount,
 }: {
   savedEpisodes: TitleEpisode[];
   tmdbSeasons: Record<number, number>;
@@ -55,16 +56,26 @@ function EpisodeGrid({
   onClear: (season: number) => void;
   selectedSeason: number;
   onSeasonChange: (s: number) => void;
+  manualSeasonCounts: Record<number, number>;
+  onManualCount: (season: number, count: number) => void;
 }) {
-  const seasons = Object.keys(tmdbSeasons).length > 0
+  const baseSeasons = Object.keys(tmdbSeasons).length > 0
     ? Object.keys(tmdbSeasons).map(Number).sort((a, b) => a - b)
     : Array.from(new Set(savedEpisodes.map(e => e.season))).sort((a, b) => a - b);
+  const maxSeason = baseSeasons.length > 0 ? Math.max(...baseSeasons) : 0;
+  // Always include the next season so users can request upcoming content
+  const seasons = maxSeason > 0 ? [...baseSeasons, maxSeason + 1] : baseSeasons;
   if (seasons.length === 0) return null;
 
   const selectedEpsInSeason = selectedEpisodes[selectedSeason] || [];
   const savedEpsInSeason = savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode);
-  const maxEpInSeason = tmdbSeasons[selectedSeason]
-    ?? Math.max(0, ...savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode));
+
+  // TMDB may return episode_count = 0 for upcoming seasons — use || not ??
+  const tmdbCount = tmdbSeasons[selectedSeason] > 0 ? tmdbSeasons[selectedSeason] : 0;
+  const savedMax = savedEpsInSeason.length > 0 ? Math.max(...savedEpsInSeason) : 0;
+  const maxFromData = tmdbCount || savedMax;
+  const maxEpInSeason = maxFromData || (manualSeasonCounts[selectedSeason] ?? 0);
+  const needsManualInput = maxFromData === 0;
 
   return (
     <div>
@@ -86,12 +97,27 @@ function EpisodeGrid({
           );
         })}
       </div>
+      {needsManualInput && (
+        <div className="mb-3 flex items-center gap-3">
+          <p className="text-xs text-zinc-500">TMDB sem dados para T{selectedSeason}. Quantos episódios tem?</p>
+          <input
+            type="number" min={1} max={100}
+            value={manualSeasonCounts[selectedSeason] || ""}
+            onChange={e => {
+              const n = parseInt(e.target.value);
+              onManualCount(selectedSeason, isNaN(n) || n < 1 ? 0 : n);
+            }}
+            placeholder="Ex: 8"
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white w-20 focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+        </div>
+      )}
       {maxEpInSeason > 0 && (
         <div className="bg-zinc-800 rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-zinc-400">
               Temporada {selectedSeason}
-              {tmdbSeasons[selectedSeason] && <span className="ml-1 text-zinc-500">({tmdbSeasons[selectedSeason]} eps no TMDB)</span>}
+              {tmdbCount > 0 && <span className="ml-1 text-zinc-500">({tmdbCount} eps no TMDB)</span>}
             </span>
             <div className="flex gap-1.5">
               <button onClick={() => onSelectAll(selectedSeason)} className="px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition">Todos</button>
@@ -135,6 +161,7 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [audio, setAudio] = useState(serie.latestRequest?.audioType || "DUBLADO");
+  const [manualSeasonCounts, setManualSeasonCounts] = useState<Record<number, number>>({});
   const [seriesFinalizada, setSeriesFinalizada] = useState(false);
   const [obs, setObs] = useState("");
   const [currentEpisodes, setCurrentEpisodes] = useState<TitleEpisode[]>([]);
@@ -188,7 +215,9 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
     });
   };
   const selectAllInSeason = (season: number) => {
-    const maxEp = tmdbSeasons[season] ?? Math.max(0, ...currentEpisodes.filter(e => e.season === season).map(e => e.episode));
+    const tmdbCount = tmdbSeasons[season] > 0 ? tmdbSeasons[season] : 0;
+    const savedMax = Math.max(0, ...currentEpisodes.filter(e => e.season === season).map(e => e.episode));
+    const maxEp = tmdbCount || savedMax || manualSeasonCounts[season] || 0;
     if (maxEp > 0) setSelectedEpisodes(prev => ({ ...prev, [season]: Array.from({ length: maxEp }, (_, i) => i + 1) }));
   };
   const clearSeason = (season: number) => setSelectedEpisodes(prev => ({ ...prev, [season]: [] }));
@@ -406,6 +435,8 @@ function SerieModal({ serie, onClose, onRefresh, isAdmin, userId }: {
                   onClear={clearSeason}
                   selectedSeason={selectedSeason}
                   onSeasonChange={setSelectedSeason}
+                  manualSeasonCounts={manualSeasonCounts}
+                  onManualCount={(season, count) => setManualSeasonCounts(prev => ({ ...prev, [season]: count }))}
                 />
               </div>
             )}
@@ -524,9 +555,11 @@ export default function AtualizacoesPage() {
 
   useEffect(() => { fetchSeries(); }, [fetchSeries]);
 
-  const filters = [
-    { key: "", label: "Todos" },
+  const visibilityFilters = [
+    { key: "", label: "Todas" },
     { key: "SEM_PEDIDO", label: "Sem pedido" },
+  ];
+  const requestStatusFilters = [
     { key: "ABERTO", label: "Aberto" },
     { key: "EM_ANDAMENTO", label: "Em Andamento" },
     { key: "EM_PROGRESSO", label: "Em Progresso" },
@@ -559,8 +592,18 @@ export default function AtualizacoesPage() {
         </svg>
       </div>
 
-      <div className="flex gap-2 flex-wrap mb-6">
-        {filters.map(({ key, label }) => (
+      <div className="flex flex-wrap gap-2 mb-2">
+        {visibilityFilters.map(({ key, label }) => (
+          <button key={key} onClick={() => { setFiltroStatus(key); setPage(1); }}
+            className={"px-4 py-1.5 rounded-full text-sm font-medium transition border " + (filtroStatus === key ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2 items-center mb-6">
+        <span className="text-xs text-zinc-600 mr-1">Pedido:</span>
+        {requestStatusFilters.map(({ key, label }) => (
           <button key={key} onClick={() => { setFiltroStatus(key); setPage(1); }}
             className={"px-4 py-1.5 rounded-full text-sm font-medium transition border " + (filtroStatus === key ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}
           >
