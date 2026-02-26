@@ -400,6 +400,7 @@ function SerieModal({
             posterUrl: serie.posterUrl,
             audioType: audio,
             notes,
+            status: newStatus,
           }),
         })
       }
