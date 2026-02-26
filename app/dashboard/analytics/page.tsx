@@ -52,15 +52,18 @@ export default function AnalyticsPage() {
   }, [status, isAdmin, router])
 
   const fetchData = useCallback(() => {
+    if (!isAdmin) return
     setLoading(true)
     fetch('/api/analytics?period=' + period)
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false))
-  }, [period])
+  }, [period, isAdmin])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    if (status === 'authenticated' && isAdmin) fetchData()
+  }, [fetchData, status, isAdmin])
 
   function handleExport() {
     setExporting(true)
