@@ -51,8 +51,8 @@ export interface AnalyticsData {
 
 type RawMonthReqRow = {
   ym: string
-  is_correction: boolean
-  is_update: boolean
+  isCorrection: boolean
+  isUpdate: boolean
   cnt: number
 }
 
@@ -135,21 +135,21 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
 
   const [rawRequests, rawTitles] = await Promise.all([
     prisma.$queryRaw<RawMonthReqRow[]>(Prisma.sql`
-      SELECT to_char(created_at, 'YYYY-MM') as ym,
-             is_correction, is_update,
+      SELECT to_char("createdAt", 'YYYY-MM') as ym,
+             "isCorrection", "isUpdate",
              count(*)::int as cnt
       FROM "Request"
-      WHERE created_at >= ${chartSince}
-      GROUP BY to_char(created_at, 'YYYY-MM'), is_correction, is_update
-      ORDER BY to_char(created_at, 'YYYY-MM')
+      WHERE "createdAt" >= ${chartSince}
+      GROUP BY to_char("createdAt", 'YYYY-MM'), "isCorrection", "isUpdate"
+      ORDER BY to_char("createdAt", 'YYYY-MM')
     `),
     prisma.$queryRaw<RawMonthTitleRow[]>(Prisma.sql`
-      SELECT to_char(created_at, 'YYYY-MM') as ym,
+      SELECT to_char("createdAt", 'YYYY-MM') as ym,
              count(*)::int as cnt
       FROM "Title"
-      WHERE created_at >= ${chartSince}
-      GROUP BY to_char(created_at, 'YYYY-MM')
-      ORDER BY to_char(created_at, 'YYYY-MM')
+      WHERE "createdAt" >= ${chartSince}
+      GROUP BY to_char("createdAt", 'YYYY-MM')
+      ORDER BY to_char("createdAt", 'YYYY-MM')
     `),
   ])
 
@@ -167,8 +167,8 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
   for (const r of rawRequests) {
     const m = ensureMonth(r.ym)
     const cnt = Number(r.cnt)
-    if (r.is_correction) m.corrections += cnt
-    else if (r.is_update) m.updates += cnt
+    if (r.isCorrection) m.corrections += cnt
+    else if (r.isUpdate) m.updates += cnt
     else m.requests += cnt
   }
 
