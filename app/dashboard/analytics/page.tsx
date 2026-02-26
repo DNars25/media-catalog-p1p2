@@ -44,6 +44,7 @@ export default function AnalyticsPage() {
 
   const [period, setPeriod] = useState<Period>('30d')
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
 
@@ -54,10 +55,14 @@ export default function AnalyticsPage() {
   const fetchData = useCallback(() => {
     if (!isAdmin) return
     setLoading(true)
+    setErrorMsg(null)
     fetch('/api/analytics?period=' + period)
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(setData)
-      .catch(() => setData(null))
+      .then(r => r.json())
+      .then(d => {
+        if (d?.error) { setErrorMsg(d.error); setData(null) }
+        else setData(d)
+      })
+      .catch(e => { setErrorMsg(String(e)); setData(null) })
       .finally(() => setLoading(false))
   }, [period, isAdmin])
 
@@ -132,6 +137,7 @@ export default function AnalyticsPage() {
         <div className='text-center py-16 text-muted-foreground'>
           <BarChart2 className='w-8 h-8 mx-auto mb-2 text-muted-foreground/40' />
           <p>Erro ao carregar dados</p>
+          {errorMsg && <p className='text-xs mt-2 font-mono text-red-400 max-w-md mx-auto break-words'>{errorMsg}</p>}
         </div>
       ) : (
         <>

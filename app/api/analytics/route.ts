@@ -13,6 +13,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid period' }, { status: 400 })
   }
 
-  const data = await getAnalyticsData(period)
-  return NextResponse.json(data)
+  try {
+    const data = await getAnalyticsData(period)
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('[analytics]', err)
+    const msg = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
