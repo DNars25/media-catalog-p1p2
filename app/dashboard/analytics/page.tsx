@@ -7,8 +7,10 @@ import type { AnalyticsData, Period } from '@/lib/analytics'
 import { UserBarChart, MonthlyLineChart } from './analytics-charts'
 
 const PERIODS: { value: Period; label: string }[] = [
+  { value: '7d', label: '7 dias' },
   { value: '30d', label: '30 dias' },
   { value: '90d', label: '90 dias' },
+  { value: '6m', label: '6 meses' },
   { value: '1y', label: '1 ano' },
   { value: 'all', label: 'Tudo' },
 ]

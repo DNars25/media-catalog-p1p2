@@ -1,13 +1,15 @@
 import { prisma } from '@/lib/db'
 import { Prisma, TitleType } from '@prisma/client'
 
-export type Period = '30d' | '90d' | '1y' | 'all'
+export type Period = '7d' | '30d' | '90d' | '6m' | '1y' | 'all'
 
 function getSince(period: Period): Date | undefined {
   if (period === 'all') return undefined
   const d = new Date()
-  if (period === '30d') d.setDate(d.getDate() - 30)
+  if (period === '7d') d.setDate(d.getDate() - 7)
+  else if (period === '30d') d.setDate(d.getDate() - 30)
   else if (period === '90d') d.setDate(d.getDate() - 90)
+  else if (period === '6m') d.setMonth(d.getMonth() - 6)
   else if (period === '1y') d.setFullYear(d.getFullYear() - 1)
   return d
 }
@@ -16,8 +18,10 @@ function getPreviousRange(period: Period): { since: Date; until: Date } | null {
   if (period === 'all') return null
   const until = getSince(period)!
   const since = new Date(until)
-  if (period === '30d') since.setDate(since.getDate() - 30)
+  if (period === '7d') since.setDate(since.getDate() - 7)
+  else if (period === '30d') since.setDate(since.getDate() - 30)
   else if (period === '90d') since.setDate(since.getDate() - 90)
+  else if (period === '6m') since.setMonth(since.getMonth() - 6)
   else if (period === '1y') since.setFullYear(since.getFullYear() - 1)
   return { since, until }
 }

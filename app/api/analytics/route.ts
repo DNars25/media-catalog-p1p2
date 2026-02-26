@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/rbac'
 import { getAnalyticsData, Period } from '@/lib/analytics'
 
-const VALID_PERIODS: Period[] = ['30d', '90d', '1y', 'all']
+const VALID_PERIODS: Period[] = ['7d', '30d', '90d', '6m', '1y', 'all']
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin()

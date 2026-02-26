@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/rbac'
 import { getAnalyticsData, Period } from '@/lib/analytics'
 import * as XLSX from 'xlsx'
 
-const VALID_PERIODS: Period[] = ['30d', '90d', '1y', 'all']
+const VALID_PERIODS: Period[] = ['7d', '30d', '90d', '6m', '1y', 'all']
 
 function pct(done: number, total: number) {
   if (!total) return '0%'
