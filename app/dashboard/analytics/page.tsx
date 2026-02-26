@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { BarChart2, Download, Loader2, TrendingUp, AlertTriangle, RefreshCw, Film } from 'lucide-react'
+import { BarChart2, Download, Loader2, TrendingUp, AlertTriangle, RefreshCw, Film, FileSpreadsheet, Printer } from 'lucide-react'
 import type { AnalyticsData, Period } from '@/lib/analytics'
 import { UserBarChart, MonthlyLineChart } from './analytics-charts'
 
@@ -13,17 +13,29 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: 'all', label: 'Tudo' },
 ]
 
+const MEDIA_TYPES = [
+  { value: '', label: 'Todos' },
+  { value: 'MOVIE', label: 'Filmes' },
+  { value: 'TV', label: 'Séries' },
+]
+
 function pct(done: number, total: number) {
   if (!total) return '0'
   return Math.round((done / total) * 100).toString()
 }
 
-function StatCard({ icon, label, value, sub, colorClass }: {
+function calcVariation(current: number, previous: number): number | null {
+  if (previous === 0) return null
+  return Math.round(((current - previous) / previous) * 100)
+}
+
+function StatCard({ icon, label, value, sub, colorClass, variation }: {
   icon: React.ReactNode
   label: string
   value: number
   sub: string
   colorClass: string
+  variation?: number | null
 }) {
   return (
     <div className={`rounded-xl border p-4 ${colorClass}`}>
@@ -32,7 +44,14 @@ function StatCard({ icon, label, value, sub, colorClass }: {
         <span className='text-sm font-medium text-muted-foreground'>{label}</span>
       </div>
       <p className='text-3xl font-bold'>{value.toLocaleString('pt-BR')}</p>
-      <p className='text-xs text-muted-foreground mt-1'>{sub}</p>
+      <div className='flex items-center justify-between mt-1 gap-2'>
+        <p className='text-xs text-muted-foreground'>{sub}</p>
+        {variation != null && (
+          <span className={`text-xs font-semibold whitespace-nowrap ${variation >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {variation >= 0 ? '↑' : '↓'} {Math.abs(variation)}%
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -43,7 +62,10 @@ export default function AnalyticsPage() {
   const isAdmin = session?.user?.role === 'ADMIN'
 
   const [period, setPeriod] = useState<Period>('30d')
+  const [userId, setUserId] = useState('')
+  const [mediaType, setMediaType] = useState('')
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [allUsers, setAllUsers] = useState<{ userId: string; userName: string }[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
@@ -56,24 +78,33 @@ export default function AnalyticsPage() {
     if (!isAdmin) return
     setLoading(true)
     setErrorMsg(null)
-    fetch('/api/analytics?period=' + period)
+    const params = new URLSearchParams({ period })
+    if (userId) params.set('userId', userId)
+    if (mediaType) params.set('mediaType', mediaType)
+    fetch('/api/analytics?' + params.toString())
       .then(r => r.json())
       .then(d => {
         if (d?.error) { setErrorMsg(d.error); setData(null) }
-        else setData(d)
+        else {
+          setData(d)
+          if (d.allUsers?.length) setAllUsers(d.allUsers)
+        }
       })
       .catch(e => { setErrorMsg(String(e)); setData(null) })
       .finally(() => setLoading(false))
-  }, [period, isAdmin])
+  }, [period, userId, mediaType, isAdmin])
 
   useEffect(() => {
     if (status === 'authenticated' && isAdmin) fetchData()
   }, [fetchData, status, isAdmin])
 
-  function handleExport() {
+  function handleExport(format: 'csv' | 'xlsx') {
     setExporting(true)
+    const params = new URLSearchParams({ period, format })
+    if (userId) params.set('userId', userId)
+    if (mediaType) params.set('mediaType', mediaType)
     const a = document.createElement('a')
-    a.href = '/api/analytics/export?period=' + period
+    a.href = '/api/analytics/export?' + params.toString()
     a.download = ''
     document.body.appendChild(a)
     a.click()
@@ -89,18 +120,51 @@ export default function AnalyticsPage() {
     )
   }
 
+  const prev = data?.previousTotals
+
   return (
     <div className='p-4 sm:p-6 space-y-6'>
       {/* Header */}
-      <div className='flex flex-col sm:flex-row sm:items-center gap-4 justify-between'>
-        <div>
-          <h1 className='text-2xl font-bold flex items-center gap-2'>
-            <BarChart2 className='w-6 h-6 text-primary' />
-            Analytics
-          </h1>
-          <p className='text-muted-foreground text-sm mt-1'>Atividade dos usuários no sistema</p>
+      <div className='flex flex-col gap-4 print:hidden'>
+        <div className='flex flex-col sm:flex-row sm:items-center gap-4 justify-between'>
+          <div>
+            <h1 className='text-2xl font-bold flex items-center gap-2'>
+              <BarChart2 className='w-6 h-6 text-primary' />
+              Analytics
+            </h1>
+            <p className='text-muted-foreground text-sm mt-1'>Atividade dos usuários no sistema</p>
+          </div>
+          {/* Export buttons */}
+          <div className='flex items-center gap-2 flex-wrap'>
+            <button
+              onClick={() => window.print()}
+              className='flex items-center gap-2 px-4 py-2 rounded-lg bg-muted border border-border hover:bg-secondary transition text-sm font-medium'
+            >
+              <Printer className='w-4 h-4' />
+              PDF
+            </button>
+            <button
+              onClick={() => handleExport('csv')}
+              disabled={exporting || loading || !data}
+              className='flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition text-sm font-medium disabled:opacity-50'
+            >
+              {exporting ? <Loader2 className='w-4 h-4 animate-spin' /> : <Download className='w-4 h-4' />}
+              CSV
+            </button>
+            <button
+              onClick={() => handleExport('xlsx')}
+              disabled={exporting || loading || !data}
+              className='flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition text-sm font-medium disabled:opacity-50'
+            >
+              {exporting ? <Loader2 className='w-4 h-4 animate-spin' /> : <FileSpreadsheet className='w-4 h-4' />}
+              Excel
+            </button>
+          </div>
         </div>
-        <div className='flex items-center gap-3 flex-wrap'>
+
+        {/* Filters row */}
+        <div className='flex flex-wrap gap-2 items-center'>
+          {/* Period */}
           <div className='flex gap-1 bg-muted rounded-lg p-1'>
             {PERIODS.map(p => (
               <button
@@ -116,17 +180,48 @@ export default function AnalyticsPage() {
               </button>
             ))}
           </div>
-          <button
-            onClick={handleExport}
-            disabled={exporting || loading || !data}
-            className='flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition text-sm font-medium disabled:opacity-50'
-          >
-            {exporting
-              ? <Loader2 className='w-4 h-4 animate-spin' />
-              : <Download className='w-4 h-4' />}
-            Exportar CSV
-          </button>
+
+          {/* Media type */}
+          <div className='flex gap-1 bg-muted rounded-lg p-1'>
+            {MEDIA_TYPES.map(t => (
+              <button
+                key={t.value}
+                onClick={() => setMediaType(t.value)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  mediaType === t.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* User filter */}
+          {allUsers.length > 0 && (
+            <select
+              value={userId}
+              onChange={e => setUserId(e.target.value)}
+              className='px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
+            >
+              <option value=''>Todos os usuários</option>
+              {allUsers.map(u => (
+                <option key={u.userId} value={u.userId}>{u.userName}</option>
+              ))}
+            </select>
+          )}
         </div>
+      </div>
+
+      {/* Print header (only visible when printing) */}
+      <div className='hidden print:block mb-4'>
+        <h1 className='text-xl font-bold'>Analytics — {PERIODS.find(p => p.value === period)?.label}</h1>
+        <p className='text-sm text-gray-500'>
+          {MEDIA_TYPES.find(t => t.value === mediaType)?.label}
+          {userId && allUsers.length > 0 ? ` · ${allUsers.find(u => u.userId === userId)?.userName}` : ''}
+          {' · '}Gerado em {new Date().toLocaleDateString('pt-BR')}
+        </p>
       </div>
 
       {loading ? (
@@ -149,6 +244,7 @@ export default function AnalyticsPage() {
               value={data.totals.requests}
               sub={`${pct(data.totals.requestsDone, data.totals.requests)}% atendidos`}
               colorClass='bg-blue-500/10 border-blue-500/20'
+              variation={prev ? calcVariation(data.totals.requests, prev.requests) : undefined}
             />
             <StatCard
               icon={<AlertTriangle className='w-5 h-5 text-red-400' />}
@@ -156,6 +252,7 @@ export default function AnalyticsPage() {
               value={data.totals.corrections}
               sub={`${pct(data.totals.correctionsDone, data.totals.corrections)}% resolvidas`}
               colorClass='bg-red-500/10 border-red-500/20'
+              variation={prev ? calcVariation(data.totals.corrections, prev.corrections) : undefined}
             />
             <StatCard
               icon={<RefreshCw className='w-5 h-5 text-purple-400' />}
@@ -163,6 +260,7 @@ export default function AnalyticsPage() {
               value={data.totals.updates}
               sub={`${pct(data.totals.updatesDone, data.totals.updates)}% concluídas`}
               colorClass='bg-purple-500/10 border-purple-500/20'
+              variation={prev ? calcVariation(data.totals.updates, prev.updates) : undefined}
             />
             <StatCard
               icon={<Film className='w-5 h-5 text-green-400' />}
@@ -170,6 +268,7 @@ export default function AnalyticsPage() {
               value={data.totals.titles}
               sub='novos títulos no período'
               colorClass='bg-green-500/10 border-green-500/20'
+              variation={prev ? calcVariation(data.totals.titles, prev.titles) : undefined}
             />
           </div>
 

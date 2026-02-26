@@ -13,8 +13,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid period' }, { status: 400 })
   }
 
+  const userId = req.nextUrl.searchParams.get('userId') || undefined
+  const mediaType = req.nextUrl.searchParams.get('mediaType') || undefined
+
   try {
-    const data = await getAnalyticsData(period)
+    const data = await getAnalyticsData(period, userId, mediaType)
     return NextResponse.json(data)
   } catch (err) {
     console.error('[analytics]', err)

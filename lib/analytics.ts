@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db'
-import { Prisma } from '@prisma/client'
+import { Prisma, TitleType } from '@prisma/client'
 
 export type Period = '30d' | '90d' | '1y' | 'all'
 
@@ -10,6 +10,16 @@ function getSince(period: Period): Date | undefined {
   else if (period === '90d') d.setDate(d.getDate() - 90)
   else if (period === '1y') d.setFullYear(d.getFullYear() - 1)
   return d
+}
+
+function getPreviousRange(period: Period): { since: Date; until: Date } | null {
+  if (period === 'all') return null
+  const until = getSince(period)!
+  const since = new Date(until)
+  if (period === '30d') since.setDate(since.getDate() - 30)
+  else if (period === '90d') since.setDate(since.getDate() - 90)
+  else if (period === '1y') since.setFullYear(since.getFullYear() - 1)
+  return { since, until }
 }
 
 export interface UserStat {
@@ -45,7 +55,9 @@ export interface AnalyticsTotals {
 export interface AnalyticsData {
   period: Period
   totals: AnalyticsTotals
+  previousTotals?: AnalyticsTotals
   byUser: UserStat[]
+  allUsers: { userId: string; userName: string }[]
   monthly: MonthlyPoint[]
 }
 
@@ -61,21 +73,35 @@ type RawMonthTitleRow = {
   cnt: number
 }
 
-export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
+export async function getAnalyticsData(
+  period: Period,
+  userId?: string,
+  mediaType?: string
+): Promise<AnalyticsData> {
   const since = getSince(period)
-  const dateFilter: Prisma.RequestWhereInput = since ? { createdAt: { gte: since } } : {}
-  const titleDateFilter: Prisma.TitleWhereInput = since ? { createdAt: { gte: since } } : {}
+
+  const requestFilter: Prisma.RequestWhereInput = {
+    ...(since ? { createdAt: { gte: since } } : {}),
+    ...(userId ? { createdById: userId } : {}),
+    ...(mediaType ? { type: mediaType as TitleType } : {}),
+  }
+
+  const titleFilter: Prisma.TitleWhereInput = {
+    ...(since ? { createdAt: { gte: since } } : {}),
+    ...(userId ? { createdById: userId } : {}),
+    ...(mediaType ? { type: mediaType as TitleType } : {}),
+  }
 
   const [users, requestGroups, titleGroups] = await Promise.all([
     prisma.user.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
     prisma.request.groupBy({
       by: ['createdById', 'isCorrection', 'isUpdate', 'status'],
-      where: dateFilter,
+      where: requestFilter,
       _count: { _all: true },
     }),
     prisma.title.groupBy({
       by: ['createdById'],
-      where: titleDateFilter,
+      where: titleFilter,
       _count: { _all: true },
     }),
   ])
@@ -130,8 +156,60 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
     titles: byUser.reduce((acc, u) => acc + u.titles, 0),
   }
 
+  // Previous period for variation cards
+  let previousTotals: AnalyticsTotals | undefined
+  const prevRange = getPreviousRange(period)
+  if (prevRange) {
+    const prevRequestFilter: Prisma.RequestWhereInput = {
+      createdAt: { gte: prevRange.since, lt: prevRange.until },
+      ...(userId ? { createdById: userId } : {}),
+      ...(mediaType ? { type: mediaType as TitleType } : {}),
+    }
+    const prevTitleFilter: Prisma.TitleWhereInput = {
+      createdAt: { gte: prevRange.since, lt: prevRange.until },
+      ...(userId ? { createdById: userId } : {}),
+      ...(mediaType ? { type: mediaType as TitleType } : {}),
+    }
+    const [prevGroups, prevTitlesCount] = await Promise.all([
+      prisma.request.groupBy({
+        by: ['isCorrection', 'isUpdate', 'status'],
+        where: prevRequestFilter,
+        _count: { _all: true },
+      }),
+      prisma.title.count({ where: prevTitleFilter }),
+    ])
+    const prev: AnalyticsTotals = {
+      requests: 0, requestsDone: 0,
+      corrections: 0, correctionsDone: 0,
+      updates: 0, updatesDone: 0,
+      titles: prevTitlesCount,
+    }
+    for (const g of prevGroups) {
+      const count = g._count._all
+      if (g.isCorrection) {
+        prev.corrections += count
+        if (g.status === 'CONCLUIDO') prev.correctionsDone += count
+      } else if (g.isUpdate) {
+        prev.updates += count
+        if (g.status === 'CONCLUIDO') prev.updatesDone += count
+      } else {
+        prev.requests += count
+        if (g.status === 'CONCLUIDO') prev.requestsDone += count
+      }
+    }
+    previousTotals = prev
+  }
+
   // Monthly chart data — capped at 24 months
   const chartSince = since ?? new Date(new Date().setMonth(new Date().getMonth() - 23))
+
+  const reqWhere = [Prisma.sql`"createdAt" >= ${chartSince}`]
+  if (userId) reqWhere.push(Prisma.sql`"createdById" = ${userId}`)
+  if (mediaType) reqWhere.push(Prisma.sql`"type" = ${mediaType}::"TitleType"`)
+
+  const titleWhere = [Prisma.sql`"createdAt" >= ${chartSince}`]
+  if (userId) titleWhere.push(Prisma.sql`"createdById" = ${userId}`)
+  if (mediaType) titleWhere.push(Prisma.sql`"type" = ${mediaType}::"TitleType"`)
 
   const [rawRequests, rawTitles] = await Promise.all([
     prisma.$queryRaw<RawMonthReqRow[]>(Prisma.sql`
@@ -139,7 +217,7 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
              "isCorrection", "isUpdate",
              count(*)::int as cnt
       FROM "Request"
-      WHERE "createdAt" >= ${chartSince}
+      WHERE ${Prisma.join(reqWhere, ' AND ')}
       GROUP BY to_char("createdAt", 'YYYY-MM'), "isCorrection", "isUpdate"
       ORDER BY to_char("createdAt", 'YYYY-MM')
     `),
@@ -147,7 +225,7 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
       SELECT to_char("createdAt", 'YYYY-MM') as ym,
              count(*)::int as cnt
       FROM "Title"
-      WHERE "createdAt" >= ${chartSince}
+      WHERE ${Prisma.join(titleWhere, ' AND ')}
       GROUP BY to_char("createdAt", 'YYYY-MM')
       ORDER BY to_char("createdAt", 'YYYY-MM')
     `),
@@ -181,5 +259,7 @@ export async function getAnalyticsData(period: Period): Promise<AnalyticsData> {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([, v]) => v)
 
-  return { period, totals, byUser, monthly }
+  const allUsers = users.map(u => ({ userId: u.id, userName: u.name }))
+
+  return { period, totals, previousTotals, byUser, allUsers, monthly }
 }
