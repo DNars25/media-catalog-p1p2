@@ -373,7 +373,7 @@ function NovaAtualizacaoModal({
           requestedTitle: libraryTitle.title,
           type: 'TV',
           isUpdate: true,
-          source: 'ADMIN',
+          source: 'PEDIDO',
           linkedTitleId: libraryTitle.id,
           tmdbId: libraryTitle.tmdbId,
           posterUrl: libraryTitle.posterUrl,

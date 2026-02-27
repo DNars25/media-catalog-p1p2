@@ -55,12 +55,12 @@ export async function GET(req: NextRequest) {
   const activeStatuses: RequestStatus[] = ['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO']
 
   if (statusFilter === 'PEDIDOS') {
-    // TV with isUpdate request, source=ADMIN, status ativo
+    // TV com isUpdate request criado explicitamente via "Nova Atualização"
     conditions.push({
       requests: {
         some: {
           isUpdate: true,
-          source: 'ADMIN',
+          source: 'PEDIDO',
           status: { in: activeStatuses },
         },
       },
