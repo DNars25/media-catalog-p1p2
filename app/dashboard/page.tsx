@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db'
-import { Film, Download, ClipboardList, Tv, RefreshCw } from 'lucide-react'
+import { Film, ClipboardList, Tv, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
+
+export const dynamic = 'force-dynamic'
 
 async function getStats() {
   const [totalTitles, openRequests, awaitingUpdate, movies, tvShows] = await Promise.all([

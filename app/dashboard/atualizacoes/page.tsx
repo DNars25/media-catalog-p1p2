@@ -1152,7 +1152,7 @@ export default function AtualizacoesPage() {
     const params = new URLSearchParams({ page: page.toString(), limit: '20' })
     if (filtroStatus) params.append('status', filtroStatus)
     if (search) params.append('search', search)
-    fetch('/api/atualizacoes?' + params.toString())
+    fetch('/api/atualizacoes?' + params.toString(), { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         setSeries(d.series || [])
