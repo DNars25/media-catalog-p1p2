@@ -656,12 +656,14 @@ function SerieModal({
   serie,
   onClose,
   onRefresh,
+  onDelete,
   isAdmin,
   userId,
 }: {
   serie: SerieCard
   onClose: () => void
   onRefresh: () => void
+  onDelete: (serieId: string) => void
   isAdmin: boolean
   userId: string
 }) {
@@ -856,7 +858,7 @@ function SerieModal({
       const res = await fetch('/api/requests/' + serie.latestRequest.id, { method: 'DELETE' })
       if (!res.ok) throw new Error()
       toast.success('Pedido excluído!')
-      onRefresh()
+      onDelete(serie.id)
       onClose()
     } catch {
       toast.error('Erro ao excluir')
@@ -1171,6 +1173,11 @@ export default function AtualizacoesPage() {
     fetchSeries()
   }
 
+  function handleDeleteSerie(serieId: string) {
+    setSeries(prev => prev.filter(s => s.id !== serieId))
+    setTotal(prev => Math.max(0, prev - 1))
+  }
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -1317,6 +1324,7 @@ export default function AtualizacoesPage() {
           serie={selected}
           onClose={() => setSelected(null)}
           onRefresh={fetchSeries}
+          onDelete={handleDeleteSerie}
           isAdmin={isAdmin}
           userId={userId}
         />
