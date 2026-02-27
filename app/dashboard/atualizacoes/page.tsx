@@ -83,14 +83,17 @@ function EpisodeGrid({
   manualSeasonCounts: Record<number, number>
   onManualCount: (season: number, count: number) => void
 }) {
-  const baseSeasons =
-    Object.keys(tmdbSeasons).length > 0
-      ? Object.keys(tmdbSeasons).map(Number).sort((a, b) => a - b)
-      : Array.from(new Set(savedEpisodes.map(e => e.season))).sort((a, b) => a - b)
+  // Todas as temporadas conhecidas: TMDB + salvas + selecionadas + manuais
+  const tmdbSeasonNums = Object.keys(tmdbSeasons).map(Number).filter(n => n > 0)
+  const savedSeasonNums = Array.from(new Set(savedEpisodes.map(e => e.season)))
+  const newSeasonNums = Object.keys(selectedNew).map(Number).filter(n => (selectedNew[n] || []).length > 0)
+  const manualSeasonNums = Object.keys(manualSeasonCounts).map(Number).filter(n => manualSeasonCounts[n] > 0)
+  const allSeasons = Array.from(
+    new Set([...tmdbSeasonNums, ...savedSeasonNums, ...newSeasonNums, ...manualSeasonNums])
+  ).sort((a, b) => a - b)
 
-  const maxSeason = baseSeasons.length > 0 ? Math.max(...baseSeasons) : 0
-  const seasons = maxSeason > 0 ? [...baseSeasons, maxSeason + 1] : baseSeasons
-  if (seasons.length === 0) return null
+  const maxExistingSeason = allSeasons.length > 0 ? Math.max(...allSeasons) : 0
+  const nextSeason = maxExistingSeason + 1
 
   const savedEpsInSeason = savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode)
   const savedSet = new Set(savedEpsInSeason)
@@ -99,14 +102,30 @@ function EpisodeGrid({
 
   const tmdbCount = tmdbSeasons[selectedSeason] > 0 ? tmdbSeasons[selectedSeason] : 0
   const savedMax = savedEpsInSeason.length > 0 ? Math.max(...savedEpsInSeason) : 0
-  const maxFromData = tmdbCount || savedMax
-  const maxEpInSeason = maxFromData || (manualSeasonCounts[selectedSeason] ?? 0)
-  const needsManualInput = maxFromData === 0
+  const newMax = newEpsInSeason.length > 0 ? Math.max(...newEpsInSeason) : 0
+  const manualCount = manualSeasonCounts[selectedSeason] || 0
+  // Sempre permite estender além do TMDB — usuário controla
+  const maxEpInSeason = Math.max(tmdbCount, savedMax, newMax, manualCount)
+
+  if (allSeasons.length === 0) {
+    return (
+      <div className="flex items-center gap-3 py-2">
+        <p className="text-xs text-zinc-500">Sem dados de temporada. Adicione manualmente:</p>
+        <button
+          onClick={() => { onManualCount(1, 1); onSeasonChange(1) }}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 text-white hover:bg-orange-600 transition"
+        >
+          + Temporada 1
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div className="flex gap-2 flex-wrap mb-3">
-        {seasons.map(s => {
+      {/* Abas de temporada + botão nova temporada */}
+      <div className="flex gap-2 flex-wrap mb-3 items-center">
+        {allSeasons.map(s => {
           const savedCount = savedEpisodes.filter(e => e.season === s).length
           const newCount = (selectedNew[s] || []).length
           return (
@@ -132,32 +151,22 @@ function EpisodeGrid({
             </button>
           )
         })}
+        {/* Adicionar nova temporada manualmente */}
+        <button
+          onClick={() => { onManualCount(nextSeason, 1); onSeasonChange(nextSeason) }}
+          className="px-2.5 py-1 rounded-lg text-xs font-medium border border-dashed border-zinc-600 text-zinc-500 hover:border-zinc-400 hover:text-zinc-300 transition"
+        >
+          + T{nextSeason}
+        </button>
       </div>
 
-      {needsManualInput && (
-        <div className="mb-3 flex items-center gap-3">
-          <p className="text-xs text-zinc-500">TMDB sem dados para T{selectedSeason}. Quantos episódios tem?</p>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={manualSeasonCounts[selectedSeason] || ''}
-            onChange={e => {
-              const n = parseInt(e.target.value)
-              onManualCount(selectedSeason, isNaN(n) || n < 1 ? 0 : n)
-            }}
-            placeholder="Ex: 8"
-            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white w-20 focus:outline-none focus:ring-1 focus:ring-orange-500"
-          />
-        </div>
-      )}
-
-      {maxEpInSeason > 0 && (
+      {/* Grid da temporada selecionada */}
+      {maxEpInSeason > 0 ? (
         <div className="bg-zinc-800 rounded-xl p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-zinc-400 flex items-center gap-2">
               Temporada {selectedSeason}
-              {tmdbCount > 0 && <span className="text-zinc-500">· {tmdbCount} eps no TMDB</span>}
+              {tmdbCount > 0 && <span className="text-zinc-500">· {tmdbCount} no TMDB</span>}
               {savedEpsInSeason.length > 0 && (
                 <span className="text-orange-400 flex items-center gap-1">
                   <Lock className="w-3 h-3" />
@@ -204,11 +213,43 @@ function EpisodeGrid({
             <p className="text-xs text-green-500 mt-2">+{newEpsInSeason.length} para adicionar nesta temporada</p>
           )}
 
-          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-zinc-700/50">
-            <span className="flex items-center gap-1.5 text-xs text-zinc-600"><span className="w-3 h-3 rounded bg-orange-500/80 inline-block" />Já no servidor (travado)</span>
-            <span className="flex items-center gap-1.5 text-xs text-zinc-600"><span className="w-3 h-3 rounded bg-green-600 inline-block" />Adicionando agora</span>
-            <span className="flex items-center gap-1.5 text-xs text-zinc-600"><span className="w-3 h-3 rounded bg-zinc-900 border border-zinc-700 inline-block" />Disponível</span>
+          {/* Estender temporada além do TMDB */}
+          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-zinc-700/50">
+            <span className="text-xs text-zinc-600">Estender até o ep:</span>
+            <input
+              type="number"
+              min={maxEpInSeason + 1}
+              max={300}
+              placeholder={String(maxEpInSeason + 1)}
+              onChange={e => {
+                const n = parseInt(e.target.value)
+                if (!isNaN(n) && n > maxEpInSeason) onManualCount(selectedSeason, n)
+              }}
+              className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white w-16 focus:outline-none focus:ring-1 focus:ring-orange-500"
+            />
+            <span className="text-zinc-700 text-xs flex items-center gap-3 ml-1">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-500/80 inline-block" />Servidor</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-600 inline-block" />Adicionando</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-zinc-900 border border-zinc-700 inline-block" />Disponível</span>
+            </span>
           </div>
+        </div>
+      ) : (
+        /* Temporada sem dados — input para definir total de eps */
+        <div className="flex items-center gap-3 bg-zinc-800 rounded-xl p-3">
+          <p className="text-xs text-zinc-500">T{selectedSeason}: quantos episódios tem?</p>
+          <input
+            type="number"
+            min={1}
+            max={300}
+            value={manualSeasonCounts[selectedSeason] || ''}
+            onChange={e => {
+              const n = parseInt(e.target.value)
+              onManualCount(selectedSeason, isNaN(n) || n < 1 ? 0 : n)
+            }}
+            placeholder="Ex: 8"
+            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1.5 text-sm text-white w-20 focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
         </div>
       )}
     </div>
@@ -296,8 +337,15 @@ function NovaAtualizacaoModal({
             if (s.season_number > 0) seasonMap[s.season_number] = s.episode_count
           }
           setTmdbSeasons(seasonMap)
-          const latestTmdb = Math.max(...tmdbData.seasons.filter((s: { season_number: number }) => s.season_number > 0).map((s: { season_number: number }) => s.season_number))
-          if (latestTmdb > 0) setSelectedSeason(latestTmdb)
+          // Abre na primeira temporada com episódios disponíveis
+          const savedCountBySeason = eps.reduce<Record<number, number>>((acc, e) => {
+            acc[e.season] = (acc[e.season] || 0) + 1
+            return acc
+          }, {})
+          const tmdbSeasonNums = Object.keys(seasonMap).map(Number).sort((a, b) => a - b)
+          const firstAvailable = tmdbSeasonNums.find(s => (savedCountBySeason[s] || 0) < seasonMap[s])
+          const initialSeason = firstAvailable ?? (tmdbSeasonNums.length > 0 ? Math.max(...tmdbSeasonNums) : 1)
+          setSelectedSeason(initialSeason)
         }
       } catch (_) {}
 
@@ -323,7 +371,9 @@ function NovaAtualizacaoModal({
     const tmdbCount = tmdbSeasons[season] > 0 ? tmdbSeasons[season] : 0
     const savedInSeason = savedEpisodes.filter(e => e.season === season)
     const savedMax = savedInSeason.length > 0 ? Math.max(...savedInSeason.map(e => e.episode)) : 0
-    const maxEp = tmdbCount || savedMax || manualSeasonCounts[season] || 0
+    const curNew = selectedNew[season] || []
+    const newMax = curNew.length > 0 ? Math.max(...curNew) : 0
+    const maxEp = Math.max(tmdbCount, savedMax, newMax, manualSeasonCounts[season] || 0)
     if (maxEp > 0) {
       const newEps = Array.from({ length: maxEp }, (_, i) => i + 1).filter(ep => !savedSet.has(ep))
       setSelectedNew(prev => ({ ...prev, [season]: newEps }))
@@ -668,12 +718,16 @@ function SerieModal({
                 if (s.season_number > 0) seasonMap[s.season_number] = s.episode_count
               }
               setTmdbSeasons(seasonMap)
-              const latestTmdb = Math.max(
-                ...tmdbData.seasons
-                  .filter((s: { season_number: number }) => s.season_number > 0)
-                  .map((s: { season_number: number }) => s.season_number)
-              )
-              if (latestTmdb > 0) setSelectedSeason(latestTmdb)
+              // Abre na primeira temporada com episódios disponíveis (savedCount < tmdbCount)
+              // Se todas estiverem "completas" pelo TMDB, abre na última
+              const savedCountBySeason = eps.reduce<Record<number, number>>((acc, e) => {
+                acc[e.season] = (acc[e.season] || 0) + 1
+                return acc
+              }, {})
+              const tmdbSeasonNums = Object.keys(seasonMap).map(Number).sort((a, b) => a - b)
+              const firstAvailable = tmdbSeasonNums.find(s => (savedCountBySeason[s] || 0) < seasonMap[s])
+              const initialSeason = firstAvailable ?? (tmdbSeasonNums.length > 0 ? Math.max(...tmdbSeasonNums) : 1)
+              setSelectedSeason(initialSeason)
             }
           } catch (_) {}
         } else if (eps.length > 0) {
@@ -700,7 +754,9 @@ function SerieModal({
     const tmdbCount = tmdbSeasons[season] > 0 ? tmdbSeasons[season] : 0
     const savedInSeason = savedEpisodes.filter(e => e.season === season)
     const savedMax = savedInSeason.length > 0 ? Math.max(...savedInSeason.map(e => e.episode)) : 0
-    const maxEp = tmdbCount || savedMax || manualSeasonCounts[season] || 0
+    const curNew = selectedNew[season] || []
+    const newMax = curNew.length > 0 ? Math.max(...curNew) : 0
+    const maxEp = Math.max(tmdbCount, savedMax, newMax, manualSeasonCounts[season] || 0)
     if (maxEp > 0) {
       const newEps = Array.from({ length: maxEp }, (_, i) => i + 1).filter(ep => !savedSet.has(ep))
       setSelectedNew(prev => ({ ...prev, [season]: newEps }))
