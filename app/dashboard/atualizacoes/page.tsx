@@ -83,17 +83,16 @@ function EpisodeGrid({
   manualSeasonCounts: Record<number, number>
   onManualCount: (season: number, count: number) => void
 }) {
-  // Todas as temporadas conhecidas: TMDB + salvas + selecionadas + manuais
   const tmdbSeasonNums = Object.keys(tmdbSeasons).map(Number).filter(n => n > 0)
   const savedSeasonNums = Array.from(new Set(savedEpisodes.map(e => e.season)))
   const newSeasonNums = Object.keys(selectedNew).map(Number).filter(n => (selectedNew[n] || []).length > 0)
   const manualSeasonNums = Object.keys(manualSeasonCounts).map(Number).filter(n => manualSeasonCounts[n] > 0)
+  // selectedSeason sempre incluído para que a aba corrente apareça mesmo sem dados prévios
   const allSeasons = Array.from(
-    new Set([...tmdbSeasonNums, ...savedSeasonNums, ...newSeasonNums, ...manualSeasonNums])
+    new Set([...tmdbSeasonNums, ...savedSeasonNums, ...newSeasonNums, ...manualSeasonNums, selectedSeason])
   ).sort((a, b) => a - b)
 
-  const maxExistingSeason = allSeasons.length > 0 ? Math.max(...allSeasons) : 0
-  const nextSeason = maxExistingSeason + 1
+  const nextSeason = Math.max(...allSeasons) + 1
 
   const savedEpsInSeason = savedEpisodes.filter(e => e.season === selectedSeason).map(e => e.episode)
   const savedSet = new Set(savedEpsInSeason)
@@ -104,22 +103,7 @@ function EpisodeGrid({
   const savedMax = savedEpsInSeason.length > 0 ? Math.max(...savedEpsInSeason) : 0
   const newMax = newEpsInSeason.length > 0 ? Math.max(...newEpsInSeason) : 0
   const manualCount = manualSeasonCounts[selectedSeason] || 0
-  // Sempre permite estender além do TMDB — usuário controla
   const maxEpInSeason = Math.max(tmdbCount, savedMax, newMax, manualCount)
-
-  if (allSeasons.length === 0) {
-    return (
-      <div className="flex items-center gap-3 py-2">
-        <p className="text-xs text-zinc-500">Sem dados de temporada. Adicione manualmente:</p>
-        <button
-          onClick={() => { onManualCount(1, 1); onSeasonChange(1) }}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-500 text-white hover:bg-orange-600 transition"
-        >
-          + Temporada 1
-        </button>
-      </div>
-    )
-  }
 
   return (
     <div>
@@ -151,9 +135,9 @@ function EpisodeGrid({
             </button>
           )
         })}
-        {/* Adicionar nova temporada manualmente */}
+        {/* Botão: troca para próxima temporada — count definido pelo usuário no input abaixo */}
         <button
-          onClick={() => { onManualCount(nextSeason, 1); onSeasonChange(nextSeason) }}
+          onClick={() => onSeasonChange(nextSeason)}
           className="px-2.5 py-1 rounded-lg text-xs font-medium border border-dashed border-zinc-600 text-zinc-500 hover:border-zinc-400 hover:text-zinc-300 transition"
         >
           + T{nextSeason}
@@ -809,7 +793,11 @@ function SerieModal({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ episodesData }),
         })
-        if (!res.ok) throw new Error()
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}))
+          toast.error('Erro ao salvar episódios: ' + (res.status + (errBody?.error ? ' — ' + JSON.stringify(errBody.error) : '')))
+          return
+        }
       }
 
       const epNotes = buildNotesFromNew()
@@ -849,13 +837,13 @@ function SerieModal({
         })
         toast.success('Série finalizada e biblioteca atualizada!')
       } else {
-        toast.success(hasNewEpisodes ? `+${totalNewEps} episódios adicionados!` : 'Pedido registrado!')
+        toast.success(hasNewEpisodes ? `+${totalNewEps} episódios salvos na biblioteca!` : 'Pedido registrado!')
       }
 
       onRefresh()
       onClose()
-    } catch {
-      toast.error('Erro ao salvar')
+    } catch (e) {
+      toast.error('Erro inesperado: ' + (e instanceof Error ? e.message : String(e)))
     } finally {
       setUpdating(false)
     }
