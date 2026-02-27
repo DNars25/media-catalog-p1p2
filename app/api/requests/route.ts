@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const parsed = RequestCreateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId, status } = parsed.data
+  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId, source, status } = parsed.data
 
   const request = await prisma.request.create({
     data: {
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       seasonNumber: seasonNumber ?? null,
       audioType: audioType ?? null,
       linkedTitleId: linkedTitleId ?? null,
+      source,
       createdById: session!.user.id,
       ...(status ? { status } : {}),
     },

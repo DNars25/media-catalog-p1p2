@@ -121,6 +121,7 @@ model Request {
   seasonNumber     Int?
   linkedTitleId    String?
   linkedTitle      Title?          @relation(fields: [linkedTitleId], references: [id])
+  source           String          @default("ADMIN")
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 

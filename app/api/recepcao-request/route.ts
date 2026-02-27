@@ -28,6 +28,7 @@ export async function POST(req: Request) {
         requestedBy: 'Vitrine',
         status: 'ABERTO',
         isUpdate: false,
+        source: 'VITRINE',
         createdById: systemUserId
       }
     })

@@ -39,6 +39,7 @@ export const RequestCreateSchema = z.object({
   seasonNumber: z.number().int().optional().nullable(),
   audioType: z.string().optional().nullable(),
   linkedTitleId: z.string().uuid().optional().nullable(),
+  source: z.enum(['ADMIN', 'VITRINE']).default('ADMIN'),
   status: z.enum(['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']).optional(),
 })
 

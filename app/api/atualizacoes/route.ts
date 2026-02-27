@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
 import { Prisma, RequestStatus } from '@prisma/client'
 
-// Séries FINALIZADA no TMDB com episódios faltando E sem pedido CONCLUIDO
+// Séries FINALIZADA com episódios faltando E sem pedido isUpdate CONCLUIDO
 async function getIncompleteIds(): Promise<string[]> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT t.id FROM "Title" t
@@ -37,10 +37,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit
 
-  const isSemPedido = statusFilter === 'SEM_PEDIDO'
-  const isConcluidos = statusFilter === 'CONCLUIDOS'
-  const needsIncomplete = !statusFilter || statusFilter === 'INCOMPLETAS' || isSemPedido
-
+  const needsIncomplete = statusFilter === 'INCOMPLETAS'
   const incompleteIds = needsIncomplete ? await getIncompleteIds() : []
 
   const conditions: Prisma.TitleWhereInput[] = [{ type: 'TV' }]
@@ -55,21 +52,57 @@ export async function GET(req: NextRequest) {
     conditions.push({ id: { in: matches.map(r => r.id) } })
   }
 
-  if (statusFilter === 'EM_ANDAMENTO') {
+  const activeStatuses: RequestStatus[] = ['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO']
+
+  if (statusFilter === 'PEDIDOS') {
+    // TV with isUpdate request, source=ADMIN, status ativo
+    conditions.push({
+      requests: {
+        some: {
+          isUpdate: true,
+          source: 'ADMIN',
+          status: { in: activeStatuses },
+        },
+      },
+    })
+  } else if (statusFilter === 'EM_ANDAMENTO') {
     conditions.push({ tvStatus: 'EM_ANDAMENTO' })
   } else if (statusFilter === 'INCOMPLETAS') {
     conditions.push({ id: { in: incompleteIds } })
-  } else if (isConcluidos) {
-    // Séries com pelo menos um pedido isUpdate CONCLUIDO
-    conditions.push({ requests: { some: { isUpdate: true, status: 'CONCLUIDO' as RequestStatus } } })
-  } else {
-    // Default ou SEM_PEDIDO: EM_ANDAMENTO + INCOMPLETAS (sem CONCLUIDOS)
-    conditions.push({ OR: [{ tvStatus: 'EM_ANDAMENTO' }, { id: { in: incompleteIds } }] })
+  } else if (statusFilter === 'SOLICITADO_VITRINE') {
+    // TV with isUpdate request, source=VITRINE, status ativo
+    conditions.push({
+      requests: {
+        some: {
+          isUpdate: true,
+          source: 'VITRINE',
+          status: { in: activeStatuses },
+        },
+      },
+    })
+  } else if (statusFilter === 'ATUALIZADO_RECENTEMENTE') {
+    // TV com qualquer isUpdate CONCLUIDO
+    conditions.push({
+      requests: {
+        some: {
+          isUpdate: true,
+          status: 'CONCLUIDO' as RequestStatus,
+        },
+      },
+    })
+  } else if (statusFilter === 'CONCLUIDAS') {
+    // tvStatus=FINALIZADA + tem CONCLUIDO isUpdate request
+    conditions.push({
+      tvStatus: 'FINALIZADA',
+      requests: {
+        some: {
+          isUpdate: true,
+          status: 'CONCLUIDO' as RequestStatus,
+        },
+      },
+    })
   }
-
-  if (isSemPedido) {
-    conditions.push({ requests: { none: { isUpdate: true } } })
-  }
+  // statusFilter === '' → Todas (sem filtro extra)
 
   const where: Prisma.TitleWhereInput = conditions.length === 1 ? conditions[0] : { AND: conditions }
 
@@ -99,6 +132,7 @@ export async function GET(req: NextRequest) {
             audioType: true,
             seasonNumber: true,
             notes: true,
+            source: true,
             createdAt: true,
             createdById: true,
             createdBy: { select: { name: true, email: true } },
