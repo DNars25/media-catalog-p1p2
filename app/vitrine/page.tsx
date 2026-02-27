@@ -192,9 +192,16 @@ export default function VitrinePage() {
     setResults(null)
     setFeedback('')
     setCorrectingId(null)
-    const res = await fetch('/api/vitrine?q=' + encodeURIComponent(query.trim()) + '&type=' + type)
-    setResults(await res.json())
-    setLoading(false)
+    try {
+      const res = await fetch('/api/vitrine?q=' + encodeURIComponent(query.trim()) + '&type=' + type)
+      if (!res.ok) throw new Error()
+      setResults(await res.json())
+    } catch {
+      setFeedback('Erro ao buscar. Tente novamente.')
+      setResults({ local: [], tmdb: [] })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const sendRequest = async (item: TmdbItem) => {
