@@ -34,6 +34,8 @@ interface SectionState {
 
 // ─── CadastroModal ────────────────────────────────────────────────────────────
 
+type ModalStep = 'choose' | 'add' | 'request'
+
 function CadastroModal({
   item,
   type,
@@ -45,11 +47,13 @@ function CadastroModal({
   onClose: () => void
   onSuccess: (tmdbId: number) => void
 }) {
+  const [step, setStep] = useState<ModalStep>('choose')
   const [details, setDetails] = useState<TmdbDetails | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(true)
   const [p1, setP1] = useState(false)
   const [p2, setP2] = useState(false)
   const [audioType, setAudioType] = useState('')
+  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -61,7 +65,7 @@ function CadastroModal({
       .finally(() => setLoadingDetails(false))
   }, [item.tmdbId, type])
 
-  async function handleSave() {
+  async function handleAddToLibrary() {
     if (!p1 && !p2) { toast.error('Selecione pelo menos um servidor'); return }
     setSaving(true)
     try {
@@ -105,6 +109,31 @@ function CadastroModal({
     }
   }
 
+  async function handleCreateRequest() {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestedTitle: details?.title || item.title,
+          type,
+          tmdbId: item.tmdbId,
+          posterUrl: details?.posterUrl || item.posterUrl || null,
+          notes: notes.trim() || null,
+          source: 'ADMIN',
+        }),
+      })
+      if (!res.ok) throw new Error('Erro ao criar pedido')
+      toast.success(`Pedido criado para "${item.title}"!`)
+      onClose()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro inesperado')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const audioOptions = type === 'MOVIE'
     ? [
         { value: 'DUBLADO', label: '🎙️ Dublado' },
@@ -119,105 +148,168 @@ function CadastroModal({
 
   const poster = details?.posterUrl || item.posterUrl
 
+  // ── Shared header ──
+  const header = (
+    <div className="flex items-start gap-4 p-5 border-b border-border">
+      {poster
+        ? <img src={poster} alt={item.title} className="w-20 rounded-lg object-cover flex-shrink-0" style={{ height: '112px' }} />
+        : <div className="w-20 h-28 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
+            {type === 'MOVIE' ? <Film className="w-6 h-6 text-muted-foreground" /> : <Tv className="w-6 h-6 text-muted-foreground" />}
+          </div>
+      }
+      <div className="flex-1 min-w-0">
+        <h2 className="font-bold text-base leading-tight">{details?.title || item.title}</h2>
+        {(details?.releaseYear || item.year) && (
+          <p className="text-muted-foreground text-sm mt-0.5">{details?.releaseYear || item.year}</p>
+        )}
+        {loadingDetails
+          ? <div className="h-2.5 bg-muted rounded animate-pulse mt-2 w-3/4" />
+          : details?.genres?.length
+            ? <p className="text-muted-foreground text-xs mt-1">{details.genres.slice(0, 3).join(' · ')}</p>
+            : null
+        }
+        {type === 'TV' && details && (
+          <p className="text-muted-foreground text-xs mt-0.5">
+            {[
+              details.tvSeasons ? `${details.tvSeasons} temp.` : null,
+              details.tvEpisodes ? `${details.tvEpisodes} eps` : null,
+              details.tvStatus === 'FINALIZADA' ? 'Finalizada' : details.tvStatus === 'EM_ANDAMENTO' ? 'Em andamento' : null,
+            ].filter(Boolean).join(' · ')}
+          </p>
+        )}
+        <p className="text-muted-foreground text-xs mt-1.5 line-clamp-2 leading-relaxed">
+          {details?.overview || item.overview || 'Sem descrição.'}
+        </p>
+      </div>
+      <button onClick={onClose} className="flex-shrink-0 p-1 rounded hover:bg-secondary text-muted-foreground">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  )
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="bg-card border border-border rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-start gap-4 p-5 border-b border-border">
-          {poster
-            ? <img src={poster} alt={item.title} className="w-20 rounded-lg object-cover flex-shrink-0" style={{ height: '112px' }} />
-            : <div className="w-20 h-28 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
-                {type === 'MOVIE' ? <Film className="w-6 h-6 text-muted-foreground" /> : <Tv className="w-6 h-6 text-muted-foreground" />}
+        {header}
+
+        {/* ── Step: choose ── */}
+        {step === 'choose' && (
+          <>
+            <div className="p-5 space-y-3">
+              <p className="text-sm text-muted-foreground mb-1">O que deseja fazer com este título?</p>
+              <button
+                onClick={() => setStep('add')}
+                className="w-full text-left p-4 rounded-xl border border-border hover:border-primary/60 hover:bg-primary/5 transition group"
+              >
+                <p className="font-semibold text-sm group-hover:text-primary transition">✅ Adicionar à Biblioteca</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Já temos este conteúdo disponível no servidor</p>
+              </button>
+              <button
+                onClick={() => setStep('request')}
+                className="w-full text-left p-4 rounded-xl border border-border hover:border-orange-500/60 hover:bg-orange-500/5 transition group"
+              >
+                <p className="font-semibold text-sm group-hover:text-orange-400 transition">📋 Criar Pedido</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Ainda não temos — solicitar para adicionar ao servidor</p>
+              </button>
+            </div>
+            <div className="px-5 pb-5">
+              <button onClick={onClose} className="w-full py-2 rounded-lg border border-border text-sm hover:bg-secondary transition text-muted-foreground">
+                Cancelar
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step: add to library ── */}
+        {step === 'add' && (
+          <>
+            <div className="p-5 space-y-5">
+              <div>
+                <p className="text-sm font-semibold mb-2">Servidor <span className="text-red-400">*</span></p>
+                <div className="flex gap-3">
+                  {[
+                    { label: 'B2P', checked: p1, toggle: () => setP1(v => !v) },
+                    { label: 'P2B', checked: p2, toggle: () => setP2(v => !v) },
+                  ].map(s => (
+                    <button
+                      key={s.label}
+                      onClick={s.toggle}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition ${
+                        s.checked ? 'bg-primary/20 border-primary text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground'
+                      }`}
+                    >
+                      {s.checked && <Check className="w-3.5 h-3.5" />}
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-          }
-          <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-base leading-tight">{details?.title || item.title}</h2>
-            {(details?.releaseYear || item.year) && (
-              <p className="text-muted-foreground text-sm mt-0.5">{details?.releaseYear || item.year}</p>
-            )}
-            {loadingDetails
-              ? <div className="h-2.5 bg-muted rounded animate-pulse mt-2 w-3/4" />
-              : details?.genres?.length
-                ? <p className="text-muted-foreground text-xs mt-1">{details.genres.slice(0, 3).join(' · ')}</p>
-                : null
-            }
-            {type === 'TV' && details && (
-              <p className="text-muted-foreground text-xs mt-0.5">
-                {[
-                  details.tvSeasons ? `${details.tvSeasons} temp.` : null,
-                  details.tvEpisodes ? `${details.tvEpisodes} eps` : null,
-                  details.tvStatus === 'FINALIZADA' ? 'Finalizada' : details.tvStatus === 'EM_ANDAMENTO' ? 'Em andamento' : null,
-                ].filter(Boolean).join(' · ')}
-              </p>
-            )}
-            <p className="text-muted-foreground text-xs mt-1.5 line-clamp-3 leading-relaxed">
-              {details?.overview || item.overview || 'Sem descrição.'}
-            </p>
-          </div>
-          <button onClick={onClose} className="flex-shrink-0 p-1 rounded hover:bg-secondary text-muted-foreground">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <div className="p-5 space-y-5">
-          {/* Servidor */}
-          <div>
-            <p className="text-sm font-semibold mb-2">Servidor <span className="text-red-400">*</span></p>
-            <div className="flex gap-3">
-              {[
-                { label: 'B2P', checked: p1, toggle: () => setP1(v => !v) },
-                { label: 'P2B', checked: p2, toggle: () => setP2(v => !v) },
-              ].map(s => (
-                <button
-                  key={s.label}
-                  onClick={s.toggle}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition ${
-                    s.checked ? 'bg-primary/20 border-primary text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground'
-                  }`}
-                >
-                  {s.checked && <Check className="w-3.5 h-3.5" />}
-                  {s.label}
-                </button>
-              ))}
+              <div>
+                <p className="text-sm font-semibold mb-2">Áudio <span className="text-muted-foreground font-normal text-xs">(opcional)</span></p>
+                <div className="space-y-2">
+                  {audioOptions.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setAudioType(audioType === opt.value ? '' : opt.value)}
+                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition ${
+                        audioType === opt.value
+                          ? 'bg-primary/20 border-primary text-foreground'
+                          : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Áudio */}
-          <div>
-            <p className="text-sm font-semibold mb-2">Áudio <span className="text-muted-foreground font-normal text-xs">(opcional)</span></p>
-            <div className="space-y-2">
-              {audioOptions.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setAudioType(audioType === opt.value ? '' : opt.value)}
-                  className={`w-full text-left px-3 py-2 rounded-lg border text-sm transition ${
-                    audioType === opt.value
-                      ? 'bg-primary/20 border-primary text-foreground'
-                      : 'border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="flex gap-3 px-5 pb-5">
+              <button onClick={() => setStep('choose')} className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition text-muted-foreground">
+                ← Voltar
+              </button>
+              <button
+                onClick={handleAddToLibrary}
+                disabled={saving || (!p1 && !p2)}
+                className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 flex items-center justify-center gap-2 transition"
+              >
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {saving ? 'Salvando...' : 'Adicionar à Biblioteca'}
+              </button>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
-        {/* Footer */}
-        <div className="flex gap-3 px-5 pb-5">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition">
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || (!p1 && !p2)}
-            className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 flex items-center justify-center gap-2 transition"
-          >
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {saving ? 'Salvando...' : 'Adicionar à Biblioteca'}
-          </button>
-        </div>
+        {/* ── Step: create request ── */}
+        {step === 'request' && (
+          <>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-muted-foreground">Um pedido será criado para este título na fila de Pedidos.</p>
+              <div>
+                <label className="text-sm font-semibold block mb-1.5">Observações <span className="text-muted-foreground font-normal text-xs">(opcional)</span></label>
+                <textarea
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="Informações adicionais sobre o pedido..."
+                  rows={3}
+                  className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 px-5 pb-5">
+              <button onClick={() => setStep('choose')} className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-secondary transition text-muted-foreground">
+                ← Voltar
+              </button>
+              <button
+                onClick={handleCreateRequest}
+                disabled={saving}
+                className="flex-1 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-500 disabled:opacity-40 flex items-center justify-center gap-2 transition"
+              >
+                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {saving ? 'Criando...' : 'Criar Pedido'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
