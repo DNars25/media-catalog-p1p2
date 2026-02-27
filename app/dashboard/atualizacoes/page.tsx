@@ -1074,13 +1074,13 @@ function SerieModal({
 // AtualizacoesPage
 // ────────────────────────────────────────────────────────────────────────────
 const FILTERS = [
-  { key: '', label: 'Todas' },
-  { key: 'PEDIDOS', label: 'Pedidos' },
   { key: 'EM_ANDAMENTO', label: 'Em Andamento' },
+  { key: 'PEDIDOS', label: 'Pedidos' },
   { key: 'INCOMPLETAS', label: 'Incompletas' },
   { key: 'SOLICITADO_VITRINE', label: 'Solicitado Vitrine' },
   { key: 'ATUALIZADO_RECENTEMENTE', label: 'Atualizado Recentemente' },
   { key: 'CONCLUIDAS', label: 'Concluídas' },
+  { key: '', label: 'Todas' },
 ]
 
 const filterDesc: Record<string, string> = {
@@ -1099,7 +1099,7 @@ export default function AtualizacoesPage() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<SerieCard | null>(null)
   const [showNovaModal, setShowNovaModal] = useState(false)
-  const [filtroStatus, setFiltroStatus] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('EM_ANDAMENTO')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
