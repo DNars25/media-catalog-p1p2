@@ -61,26 +61,52 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Title not linked — create or find it, then link
       try {
         const tmdbType = existing.type === 'MOVIE' ? 'movie' : 'tv'
-        const details = await getTMDBDetails(tmdbType, existing.tmdbId)
-        const tvDetails = details.type === 'TV' ? (details as TmdbTvDetails) : null
+
+        // Build base data from the request itself (always available)
+        let titleName = existing.requestedTitle
+        let titlePoster: string | null = existing.posterUrl ?? null
+        let overview: string | null = null
+        let releaseYear: number | null = null
+        let genres: string[] = []
+        let tvSeasons: number | null = null
+        let tvEpisodes: number | null = null
+        let tvStatus: 'EM_ANDAMENTO' | 'FINALIZADA' | null = null
+
+        // Enrich with TMDB — fail gracefully if unavailable
+        try {
+          const details = await getTMDBDetails(tmdbType, existing.tmdbId)
+          titleName = details.title || existing.requestedTitle
+          titlePoster = details.posterUrl ?? existing.posterUrl ?? null
+          overview = details.overview ?? null
+          releaseYear = details.releaseYear ?? null
+          genres = details.genres
+          if (details.type === 'TV') {
+            const tv = details as TmdbTvDetails
+            tvSeasons = tv.tvSeasons ?? null
+            tvEpisodes = tv.tvEpisodes ?? null
+            tvStatus = tv.tvStatus ?? null
+          }
+        } catch {
+          // TMDB unavailable — proceed with request data
+        }
 
         const upserted = await prisma.title.upsert({
           where: { tmdbId_type: { tmdbId: existing.tmdbId, type: existing.type } },
           create: {
             tmdbId: existing.tmdbId,
             type: existing.type,
-            title: details.title,
-            overview: details.overview ?? null,
-            posterUrl: details.posterUrl ?? null,
-            releaseYear: details.releaseYear ?? null,
-            genres: details.genres,
+            title: titleName,
+            overview,
+            posterUrl: titlePoster,
+            releaseYear,
+            genres,
             internalStatus: 'DISPONIVEL',
             audioType: newAudioType ?? null,
             createdById: session!.user.id,
-            ...(tvDetails && {
-              tvSeasons: tvDetails.tvSeasons ?? null,
-              tvEpisodes: tvDetails.tvEpisodes ?? null,
-              tvStatus: tvDetails.tvStatus ?? null,
+            ...(existing.type === 'TV' && {
+              tvSeasons,
+              tvEpisodes,
+              ...(tvStatus && { tvStatus }),
             }),
           },
           update: {
