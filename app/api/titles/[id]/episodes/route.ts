@@ -25,15 +25,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       skipDuplicates: true,
     })
 
-    // Library sync: update tvSeasons if new episodes belong to a higher season
+    // Library sync: update tvSeasons and savedEpisodeCount on Title
     const allEps = await prisma.titleEpisode.findMany({
       where: { titleId: params.id },
-      select: { season: true },
+      select: { season: true, episode: true },
     })
     const maxSeason = allEps.length > 0 ? Math.max(...allEps.map(e => e.season)) : 0
     const currentTitle = await prisma.title.findUnique({ where: { id: params.id }, select: { tvSeasons: true } })
+    const updateData: { tvSeasons?: number } = {}
     if (maxSeason > 0 && (!currentTitle?.tvSeasons || maxSeason > currentTitle.tvSeasons)) {
-      await prisma.title.update({ where: { id: params.id }, data: { tvSeasons: maxSeason } })
+      updateData.tvSeasons = maxSeason
+    }
+    if (Object.keys(updateData).length > 0) {
+      await prisma.title.update({ where: { id: params.id }, data: updateData })
     }
   }
 

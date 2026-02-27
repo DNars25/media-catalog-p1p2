@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2 } from 'lucide-react'
 
@@ -16,10 +16,31 @@ interface TitleForModal {
   tvEpisodes: number | null
 }
 
+interface TitleEpisode {
+  season: number
+  episode: number
+}
+
 interface EditTitleModalProps {
   title: TitleForModal
   onClose: () => void
   onSaved: () => void
+}
+
+function fmtRange(eps: number[]): string {
+  const s = [...eps].sort((a, b) => a - b)
+  const ranges: string[] = []
+  let start = s[0], end = s[0]
+  for (let i = 1; i < s.length; i++) {
+    if (s[i] === end + 1) {
+      end = s[i]
+    } else {
+      ranges.push(start === end ? `${start}` : `${start}–${end}`)
+      start = end = s[i]
+    }
+  }
+  ranges.push(start === end ? `${start}` : `${start}–${end}`)
+  return ranges.join(', ')
 }
 
 export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps) {
@@ -28,10 +49,26 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
     hasP2: title.hasP2,
     internalStatus: title.internalStatus,
     tvStatus: title.tvStatus || '',
-    tvSeasons: title.tvSeasons || '',
-    tvEpisodes: title.tvEpisodes || '',
   })
   const [loading, setLoading] = useState(false)
+  const [episodes, setEpisodes] = useState<TitleEpisode[]>([])
+  const [loadingEps, setLoadingEps] = useState(false)
+
+  useEffect(() => {
+    if (title.type !== 'TV') return
+    setLoadingEps(true)
+    fetch(`/api/titles/${title.id}`)
+      .then(r => r.json())
+      .then(data => setEpisodes(data.episodes || []))
+      .catch(() => {})
+      .finally(() => setLoadingEps(false))
+  }, [title.id, title.type])
+
+  const episodesBySeason = episodes.reduce<Record<number, number[]>>((acc, ep) => {
+    if (!acc[ep.season]) acc[ep.season] = []
+    acc[ep.season].push(ep.episode)
+    return acc
+  }, {})
 
   const handleSave = async () => {
     setLoading(true)
@@ -40,8 +77,6 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
-        tvSeasons: form.tvSeasons ? parseInt(String(form.tvSeasons)) : null,
-        tvEpisodes: form.tvEpisodes ? parseInt(String(form.tvEpisodes)) : null,
         tvStatus: form.tvStatus || null,
       }),
     })
@@ -56,10 +91,15 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bg-card border border-border rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold truncate">{title.title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="space-y-4">
@@ -82,6 +122,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
             })}
           </div>
 
+          {/* Status Interno */}
           <div>
             <label className="text-sm font-medium text-muted-foreground block mb-1.5">Status Interno</label>
             <select
@@ -97,6 +138,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
 
           {title.type === 'TV' && (
             <>
+              {/* Status da Série */}
               <div>
                 <label className="text-sm font-medium text-muted-foreground block mb-1.5">Status da Série</label>
                 <select
@@ -110,32 +152,56 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground block mb-1.5">Temporadas</label>
-                  <input
-                    type="number"
-                    value={form.tvSeasons}
-                    onChange={(e) => setForm({ ...form, tvSeasons: e.target.value })}
-                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
+              {/* Episódios na Biblioteca — por temporada */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">Episódios na Biblioteca</span>
+                  {(title.tvSeasons != null || title.tvEpisodes != null) && (
+                    <span className="text-xs text-muted-foreground">
+                      TMDB: {title.tvSeasons ?? '?'} temp · {title.tvEpisodes ?? '?'} eps
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground block mb-1.5">Episódios</label>
-                  <input
-                    type="number"
-                    value={form.tvEpisodes}
-                    onChange={(e) => setForm({ ...form, tvEpisodes: e.target.value })}
-                    className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                </div>
+
+                {loadingEps ? (
+                  <div className="flex items-center gap-2 text-muted-foreground py-3">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="text-xs">Carregando episódios...</span>
+                  </div>
+                ) : episodes.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic py-2">Nenhum episódio cadastrado na biblioteca.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {Object.entries(episodesBySeason)
+                      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                      .map(([season, eps]) => (
+                        <div key={season} className="bg-muted rounded-lg px-3 py-2.5">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-sm font-semibold">Temporada {season}</span>
+                            <span className="text-xs text-muted-foreground font-medium">
+                              {eps.length} episódio{eps.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Eps: {fmtRange(eps)}</p>
+                        </div>
+                      ))}
+                    <p className="text-xs text-muted-foreground text-right pt-1">
+                      {episodes.length} episódio{episodes.length !== 1 ? 's' : ''} no total
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}
         </div>
 
         <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border hover:bg-secondary text-sm transition-colors">Cancelar</button>
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 rounded-lg border border-border hover:bg-secondary text-sm transition-colors"
+          >
+            Cancelar
+          </button>
           <button
             onClick={handleSave}
             disabled={loading}
