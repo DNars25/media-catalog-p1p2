@@ -524,7 +524,7 @@ export default function DiscoverPage({ type }: { type: 'MOVIE' | 'TV' }) {
             )}
           </h2>
           {section.loading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="aspect-[2/3] bg-muted rounded-xl animate-pulse" />
               ))}
@@ -532,7 +532,7 @@ export default function DiscoverPage({ type }: { type: 'MOVIE' | 'TV' }) {
           ) : section.items.length === 0 ? (
             <p className="text-muted-foreground text-sm py-4">Nenhum resultado encontrado.</p>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               {section.items.map(item => (
                 <ContentCard
                   key={item.tmdbId}

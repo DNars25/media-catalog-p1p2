@@ -103,7 +103,7 @@ export function Sidebar() {
         </button>
       </div>
       {open && <div className='md:hidden fixed inset-0 z-40 bg-black/60' onClick={toggleOpen} />}
-      <div className={cn('md:hidden fixed top-0 left-0 h-full w-72 z-50 transform transition-transform duration-300 flex flex-col', open ? 'translate-x-0' : '-translate-x-full')} style={{ backgroundColor: '#050d18' }}>
+      <div className={cn('md:hidden fixed top-0 left-0 h-full w-[85vw] max-w-72 z-50 transform transition-transform duration-300 flex flex-col', open ? 'translate-x-0' : '-translate-x-full')} style={{ backgroundColor: '#050d18' }}>
         <div className='border-b border-white/10 flex items-center justify-between px-4 py-2.5'>
           <img src='/nars-logo.png' alt='Encoding Solutions' className='h-8 w-auto object-contain' />
           <button onClick={toggleOpen} className='text-white p-2 rounded-lg hover:bg-white/10 transition-colors' aria-label="Fechar menu">

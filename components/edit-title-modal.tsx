@@ -245,7 +245,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
                                     key={ep}
                                     onClick={() => handleDeleteEpisode(seasonNum, ep)}
                                     disabled={deletingKey !== null}
-                                    className="flex items-center gap-1 bg-background border border-border rounded-md px-2 py-0.5 text-xs font-medium hover:border-destructive hover:text-destructive disabled:opacity-40 transition-colors group"
+                                    className="flex items-center gap-1 bg-background border border-border rounded-md px-2 py-1 text-xs font-medium hover:border-destructive hover:text-destructive disabled:opacity-40 transition-colors group"
                                     title={`Remover Ep. ${ep}`}
                                   >
                                     {isDeletingEp

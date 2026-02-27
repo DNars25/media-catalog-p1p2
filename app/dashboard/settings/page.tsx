@@ -105,7 +105,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">Plataforma pessoal para catalogar e gerenciar filmes e séries armazenados nos servidores B2P e P2B. Tudo num só lugar — busca rápida, controle de disponibilidade e histórico de pedidos.</p>
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-muted rounded-lg p-3 text-center">
             <p className="text-2xl mb-1">🎥</p>
             <p className="text-xs font-medium">Filmes & Séries</p>

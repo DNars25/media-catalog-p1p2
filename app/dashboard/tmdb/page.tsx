@@ -174,7 +174,7 @@ export default function TmdbPage() {
           <div className='bg-card border border-border rounded-2xl overflow-hidden'>
 
             {/* Poster + Info */}
-            <div className='flex gap-5 p-5'>
+            <div className='flex flex-col sm:flex-row gap-5 p-5'>
               <div className='shrink-0'>
                 {selected.posterUrl
                   ? <img src={selected.posterUrl} alt={selected.name} className='w-32 rounded-xl object-cover' style={{ height: '192px' }} />

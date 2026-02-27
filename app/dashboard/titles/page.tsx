@@ -176,7 +176,7 @@ export default function TitlesPage() {
                     </td>
                     <td className="py-3 px-4 text-xs text-zinc-500 font-mono hidden sm:table-cell">{t.tmdbId}</td>
                     <td className="py-3 px-4">
-                      <p className="font-medium text-sm">{t.title}</p>
+                      <p className="font-medium text-sm line-clamp-2 leading-tight">{t.title}</p>
                       {t.type === 'TV' && t.tvStatus && (
                         <div className="mt-1"><Badge status={t.tvStatus} /></div>
                       )}
