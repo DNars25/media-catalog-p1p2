@@ -177,7 +177,7 @@ export default function CorrecoesPage() {
   const userId = session?.user?.id || ''
   const [corrections, setCorrections] = useState<Correction[]>([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState('')
+  const [filterStatus, setFilterStatus] = useState('ABERTO')
   const [total, setTotal] = useState(0)
 
   const fetchCorrections = useCallback(() => {

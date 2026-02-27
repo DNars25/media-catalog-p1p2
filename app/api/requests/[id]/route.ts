@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/rbac"
 import { z } from "zod"
 import { logAudit } from "@/lib/audit"
 import { sendRequestStatusChanged } from "@/lib/email"
+import { getTMDBDetails, TmdbTvDetails } from "@/lib/tmdb"
 const UpdateSchema = z.object({
   status: z.enum(["ABERTO", "EM_ANDAMENTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"]).optional(),
   notes: z.string().optional().nullable(),
@@ -39,6 +40,62 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         oldStatus: existing.status,
         newStatus: parsed.data.status,
       })
+    }
+  }
+
+  // Auto-save to library when a request is concluded
+  if (parsed.data.status === 'CONCLUIDO' && existing.status !== 'CONCLUIDO') {
+    const newAudioType = parsed.data.audioType ?? existing.audioType ?? null
+    const linkedId = parsed.data.linkedTitleId ?? existing.linkedTitleId
+
+    if (linkedId) {
+      // Title already in library — update status and audio
+      await prisma.title.update({
+        where: { id: linkedId },
+        data: {
+          internalStatus: 'DISPONIVEL',
+          ...(newAudioType ? { audioType: newAudioType } : {}),
+        },
+      }).catch(() => {})
+    } else if (existing.tmdbId) {
+      // Title not linked — create or find it, then link
+      try {
+        const tmdbType = existing.type === 'MOVIE' ? 'movie' : 'tv'
+        const details = await getTMDBDetails(tmdbType, existing.tmdbId)
+        const tvDetails = details.type === 'TV' ? (details as TmdbTvDetails) : null
+
+        const upserted = await prisma.title.upsert({
+          where: { tmdbId_type: { tmdbId: existing.tmdbId, type: existing.type } },
+          create: {
+            tmdbId: existing.tmdbId,
+            type: existing.type,
+            title: details.title,
+            overview: details.overview ?? null,
+            posterUrl: details.posterUrl ?? null,
+            releaseYear: details.releaseYear ?? null,
+            genres: details.genres,
+            internalStatus: 'DISPONIVEL',
+            audioType: newAudioType ?? null,
+            createdById: session!.user.id,
+            ...(tvDetails && {
+              tvSeasons: tvDetails.tvSeasons ?? null,
+              tvEpisodes: tvDetails.tvEpisodes ?? null,
+              tvStatus: tvDetails.tvStatus ?? null,
+            }),
+          },
+          update: {
+            internalStatus: 'DISPONIVEL',
+            ...(newAudioType ? { audioType: newAudioType } : {}),
+          },
+        })
+
+        await prisma.request.update({
+          where: { id: params.id },
+          data: { linkedTitleId: upserted.id },
+        })
+      } catch {
+        // Don't fail the request if title upsert fails
+      }
     }
   }
 

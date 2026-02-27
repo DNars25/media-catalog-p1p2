@@ -149,7 +149,7 @@ export default function RequestsPage() {
   const [pages, setPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
+  const [filterStatus, setFilterStatus] = useState('ABERTO')
   const [filterType, setFilterType] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [audioModal, setAudioModal] = useState<{ id: string; type: string; current?: string | null; newStatus: string } | null>(null)
@@ -286,7 +286,7 @@ export default function RequestsPage() {
           ))}
         </div>
         <div className="flex gap-2 flex-wrap">
-          {["", "ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"].map((s) => (
+          {["ABERTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO", ""].map((s) => (
             <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }} className={"px-4 py-1.5 rounded-full text-sm font-medium transition border " + (filterStatus === s ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
               {s === "" ? "Todos" : s === "EM_PROGRESSO" ? "Em Progresso" : s.charAt(0) + s.slice(1).toLowerCase()}
             </button>
