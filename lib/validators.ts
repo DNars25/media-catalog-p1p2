@@ -19,6 +19,7 @@ export const TitleCreateSchema = z.object({
   internalStatus: z.enum(['AGUARDANDO_DOWNLOAD', 'DISPONIVEL', 'INDISPONIVEL']).default('AGUARDANDO_DOWNLOAD'),
   hasP1: z.boolean().default(false),
   hasP2: z.boolean().default(false),
+  audioType: z.string().optional().nullable(),
   episodesData: z.array(EpisodeItemSchema).optional().default([]),
 })
 

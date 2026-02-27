@@ -36,7 +36,14 @@ export async function GET(req: NextRequest) {
   if (internalStatus) where.internalStatus = internalStatus as InternalStatus
   if (tvStatus) where.tvStatus = tvStatus as TvStatus
   const tmdbIdParam = sp.get('tmdbId')
-  if (tmdbIdParam && !isNaN(Number(tmdbIdParam))) where.tmdbId = parseInt(tmdbIdParam, 10)
+  if (tmdbIdParam) {
+    if (tmdbIdParam.includes(',')) {
+      const ids = tmdbIdParam.split(',').map(Number).filter(n => !isNaN(n) && n > 0)
+      if (ids.length > 0) where.tmdbId = { in: ids }
+    } else if (!isNaN(Number(tmdbIdParam))) {
+      where.tmdbId = parseInt(tmdbIdParam, 10)
+    }
+  }
 
   const [total, titles] = await Promise.all([
     prisma.title.count({ where }),
