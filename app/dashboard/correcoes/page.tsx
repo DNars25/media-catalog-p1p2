@@ -219,7 +219,7 @@ export default function CorrecoesPage() {
     }
   }
 
-  const filters = ['', 'ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']
+  const filters = ['ABERTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO', '']
 
   return (
     <div className='p-4 sm:p-6'>
