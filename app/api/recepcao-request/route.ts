@@ -14,7 +14,7 @@ async function getSystemUserId(): Promise<string | null> {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { title, type, posterUrl } = body
+    const { title, type, posterUrl, tmdbId } = body
     if (VALID_TYPES.includes(type) === false) return NextResponse.json({ error: 'Tipo invalido' }, { status: 400 })
 
     const systemUserId = await getSystemUserId()
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
         requestedTitle: title,
         type: type,
         posterUrl: posterUrl || null,
+        tmdbId: typeof tmdbId === 'number' ? tmdbId : null,
         requestedBy: 'Vitrine',
         status: 'ABERTO',
         isUpdate: false,

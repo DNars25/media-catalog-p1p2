@@ -208,7 +208,7 @@ export default function VitrinePage() {
     const res = await fetch('/api/recepcao-request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: item.title, type, posterUrl: item.poster }),
+      body: JSON.stringify({ title: item.title, type, posterUrl: item.poster, tmdbId: item.tmdbId }),
     })
     if (res.ok) {
       setRequested(prev => [...prev, item.tmdbId])
