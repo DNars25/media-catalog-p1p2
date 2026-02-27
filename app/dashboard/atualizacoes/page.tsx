@@ -240,12 +240,14 @@ function SerieModal({
   serie,
   onClose,
   onRefresh,
+  onProcessed,
   isAdmin,
   userId,
 }: {
   serie: SerieCard
   onClose: () => void
   onRefresh: () => void
+  onProcessed: (id: string) => void
   isAdmin: boolean
   userId: string
 }) {
@@ -351,6 +353,7 @@ function SerieModal({
       })
       if (!res.ok) throw new Error()
       toast.success('Status atualizado!')
+      onProcessed(serie.id)
       onRefresh()
       onClose()
     } catch {
@@ -417,6 +420,7 @@ function SerieModal({
         toast.success(hasNewEpisodes ? `+${totalNewEps} episódios adicionados!` : 'Pedido registrado!')
       }
 
+      onProcessed(serie.id)
       onRefresh()
       onClose()
     } catch {
@@ -779,8 +783,13 @@ export default function AtualizacoesPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
+  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set())
+  const [showProcessed, setShowProcessed] = useState(false)
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
   const userId = session?.user?.id || ''
+
+  const handleProcessed = (id: string) =>
+    setProcessedIds(prev => { const s = new Set(prev); s.add(id); return s })
 
   const fetchSeries = useCallback(() => {
     setLoading(true)
@@ -841,21 +850,52 @@ export default function AtualizacoesPage() {
         ))}
       </div>
 
+      {/* Contador de processadas na sessão */}
+      {processedIds.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 px-4 py-2.5 rounded-lg bg-green-900/30 border border-green-700/40">
+          <span className="text-green-400 text-sm font-medium">
+            ✓ {processedIds.size} série{processedIds.size !== 1 ? 's' : ''} processada{processedIds.size !== 1 ? 's' : ''} nesta sessão
+          </span>
+          <button
+            onClick={() => setShowProcessed(v => !v)}
+            className="text-xs text-green-500 hover:text-green-300 underline ml-auto"
+          >
+            {showProcessed ? 'Ocultar' : 'Ver'}
+          </button>
+          <button
+            onClick={() => { setProcessedIds(new Set()); setShowProcessed(false) }}
+            className="text-xs text-zinc-500 hover:text-zinc-300"
+          >
+            Limpar
+          </button>
+        </div>
+      )}
+
       {/* Lista */}
       {loading ? (
         <div className="text-center py-16 text-zinc-400">Carregando...</div>
-      ) : series.length === 0 ? (
-        <div className="text-center py-16 text-zinc-400">Nenhuma série encontrada.</div>
+      ) : series.filter(s => showProcessed || !processedIds.has(s.id)).length === 0 ? (
+        <div className="text-center py-16 text-zinc-400">
+          {processedIds.size > 0 && !showProcessed
+            ? 'Todas as séries desta página foram processadas.'
+            : 'Nenhuma série encontrada.'}
+        </div>
       ) : (
         <div className="space-y-2">
-          {series.map(s => {
+          {series.filter(s => showProcessed || !processedIds.has(s.id)).map(s => {
             const isConcluida = s.latestRequest?.status === 'CONCLUIDO'
             const isIncompleta = s.tvStatus === 'FINALIZADA' && !isConcluida
+            const wasProcessed = processedIds.has(s.id)
             return (
               <div
                 key={s.id}
                 onClick={() => setSelected(s)}
-                className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-600 transition"
+                className={
+                  'flex items-center gap-4 rounded-xl p-4 cursor-pointer transition border ' +
+                  (wasProcessed
+                    ? 'bg-green-950/30 border-green-800/40 opacity-60 hover:opacity-100'
+                    : 'bg-zinc-900 border-zinc-800 hover:border-zinc-600')
+                }
               >
                 {s.posterUrl ? (
                   <img src={s.posterUrl} alt={s.title} className="w-12 h-16 object-cover rounded-lg flex-shrink-0" />
@@ -952,6 +992,7 @@ export default function AtualizacoesPage() {
           serie={selected}
           onClose={() => setSelected(null)}
           onRefresh={fetchSeries}
+          onProcessed={handleProcessed}
           isAdmin={isAdmin}
           userId={userId}
         />

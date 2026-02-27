@@ -24,6 +24,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       })),
       skipDuplicates: true,
     })
+
+    // Atualiza tvSeasons no Title se a nova temporada máxima for maior
+    const allEps = await prisma.titleEpisode.findMany({
+      where: { titleId: params.id },
+      select: { season: true },
+    })
+    const maxSeason = allEps.length > 0 ? Math.max(...allEps.map(e => e.season)) : 0
+    if (maxSeason > 0 && maxSeason > (title.tvSeasons ?? 0)) {
+      await prisma.title.update({
+        where: { id: params.id },
+        data: { tvSeasons: maxSeason },
+      })
+    }
   }
 
   const episodes = await prisma.titleEpisode.findMany({
