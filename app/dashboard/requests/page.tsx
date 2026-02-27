@@ -222,9 +222,15 @@ export default function RequestsPage() {
       body: JSON.stringify({ status, audioType })
     })
     if (res.ok) {
+      const data = await res.json()
       const { complete } = getAudioLabel(audioType)
       if (status === 'CONCLUIDO') {
-        toast.success(complete ? '✅ Concluído — Dub/Leg!' : '🎙️ Concluído — você pode atualizar o áudio depois')
+        if (data.savedToLibrary) {
+          toast.success(complete ? '✅ Concluído e salvo na biblioteca — Dub/Leg!' : '✅ Concluído e salvo na biblioteca!')
+        } else {
+          const reason = data.saveError === 'no_tmdb_id' ? ' (pedido sem TMDB ID)' : data.saveError ? ` (erro: ${data.saveError})` : ''
+          toast.warning(`Concluído — título não salvo na biblioteca${reason}`)
+        }
       } else {
         toast.success('Status atualizado')
       }

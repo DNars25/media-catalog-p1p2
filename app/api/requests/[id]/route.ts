@@ -44,25 +44,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   // Auto-save to library when a request is concluded
+  let savedToLibrary = false
+  let saveError: string | null = null
+
   if (parsed.data.status === 'CONCLUIDO' && existing.status !== 'CONCLUIDO') {
     const newAudioType = parsed.data.audioType ?? existing.audioType ?? null
     const linkedId = parsed.data.linkedTitleId ?? existing.linkedTitleId
 
     if (linkedId) {
-      // Title already in library — update status and audio
-      await prisma.title.update({
+      const updated = await prisma.title.update({
         where: { id: linkedId },
         data: {
           internalStatus: 'DISPONIVEL',
           ...(newAudioType ? { audioType: newAudioType } : {}),
         },
-      }).catch(() => {})
+      }).catch((e: unknown) => { saveError = String(e); return null })
+      savedToLibrary = updated !== null
     } else if (existing.tmdbId) {
-      // Title not linked — create or find it, then link
       try {
         const tmdbType = existing.type === 'MOVIE' ? 'movie' : 'tv'
 
-        // Build base data from the request itself (always available)
         let titleName = existing.requestedTitle
         let titlePoster: string | null = existing.posterUrl ?? null
         let overview: string | null = null
@@ -72,7 +73,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         let tvEpisodes: number | null = null
         let tvStatus: 'EM_ANDAMENTO' | 'FINALIZADA' | null = null
 
-        // Enrich with TMDB — fail gracefully if unavailable
         try {
           const details = await getTMDBDetails(tmdbType, existing.tmdbId)
           titleName = details.title || existing.requestedTitle
@@ -119,13 +119,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           where: { id: params.id },
           data: { linkedTitleId: upserted.id },
         })
-      } catch {
-        // Don't fail the request if title upsert fails
+
+        savedToLibrary = true
+      } catch (e: unknown) {
+        saveError = String(e)
       }
+    } else {
+      saveError = 'no_tmdb_id'
+    }
+
+    if (!savedToLibrary) {
+      logAudit({
+        entityType: 'Request',
+        entityId: params.id,
+        action: 'LIBRARY_SAVE_FAILED',
+        userId: session!.user.id,
+        after: { saveError, tmdbId: existing.tmdbId, linkedId },
+      })
     }
   }
 
-  return NextResponse.json(request)
+  return NextResponse.json({ ...request, savedToLibrary, saveError })
 }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const { error, session } = await requireAuth()
