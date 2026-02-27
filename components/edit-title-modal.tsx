@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, Trash2 } from 'lucide-react'
 
 interface TitleForModal {
   id: string
@@ -53,6 +53,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
   const [loading, setLoading] = useState(false)
   const [episodes, setEpisodes] = useState<TitleEpisode[]>([])
   const [loadingEps, setLoadingEps] = useState(false)
+  const [deletingKey, setDeletingKey] = useState<string | null>(null)
 
   useEffect(() => {
     if (title.type !== 'TV') return
@@ -69,6 +70,46 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
     acc[ep.season].push(ep.episode)
     return acc
   }, {})
+
+  const handleDeleteEpisode = async (season: number, episode: number) => {
+    const key = `${season}-${episode}`
+    setDeletingKey(key)
+    try {
+      const res = await fetch(`/api/titles/${title.id}/episodes`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season, episode }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setEpisodes(data.episodes || [])
+      toast.success(`Ep. ${episode} da Temporada ${season} removido`)
+    } catch {
+      toast.error('Erro ao remover episódio')
+    } finally {
+      setDeletingKey(null)
+    }
+  }
+
+  const handleDeleteSeason = async (season: number) => {
+    const key = `season-${season}`
+    setDeletingKey(key)
+    try {
+      const res = await fetch(`/api/titles/${title.id}/episodes`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ season }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setEpisodes(data.episodes || [])
+      toast.success(`Temporada ${season} removida`)
+    } catch {
+      toast.error('Erro ao remover temporada')
+    } finally {
+      setDeletingKey(null)
+    }
+  }
 
   const handleSave = async () => {
     setLoading(true)
@@ -171,21 +212,55 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
                 ) : episodes.length === 0 ? (
                   <p className="text-xs text-muted-foreground italic py-2">Nenhum episódio cadastrado na biblioteca.</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {Object.entries(episodesBySeason)
                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                      .map(([season, eps]) => (
-                        <div key={season} className="bg-muted rounded-lg px-3 py-2.5">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-sm font-semibold">Temporada {season}</span>
-                            <span className="text-xs text-muted-foreground font-medium">
-                              {eps.length} episódio{eps.length !== 1 ? 's' : ''}
-                            </span>
+                      .map(([season, eps]) => {
+                        const seasonNum = parseInt(season)
+                        const seasonKey = `season-${seasonNum}`
+                        const isDeletingSeason = deletingKey === seasonKey
+                        return (
+                          <div key={season} className="bg-muted rounded-lg px-3 py-2.5">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-semibold">Temporada {season}</span>
+                              <button
+                                onClick={() => handleDeleteSeason(seasonNum)}
+                                disabled={deletingKey !== null}
+                                className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/80 disabled:opacity-40 transition-opacity"
+                                title="Apagar temporada inteira"
+                              >
+                                {isDeletingSeason
+                                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                                  : <Trash2 className="w-3 h-3" />
+                                }
+                                Apagar temporada
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[...eps].sort((a, b) => a - b).map(ep => {
+                                const epKey = `${seasonNum}-${ep}`
+                                const isDeletingEp = deletingKey === epKey
+                                return (
+                                  <button
+                                    key={ep}
+                                    onClick={() => handleDeleteEpisode(seasonNum, ep)}
+                                    disabled={deletingKey !== null}
+                                    className="flex items-center gap-1 bg-background border border-border rounded-md px-2 py-0.5 text-xs font-medium hover:border-destructive hover:text-destructive disabled:opacity-40 transition-colors group"
+                                    title={`Remover Ep. ${ep}`}
+                                  >
+                                    {isDeletingEp
+                                      ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                      : <X className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    }
+                                    {ep}
+                                  </button>
+                                )
+                              })}
+                            </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">Eps: {fmtRange(eps)}</p>
-                        </div>
-                      ))}
-                    <p className="text-xs text-muted-foreground text-right pt-1">
+                        )
+                      })}
+                    <p className="text-xs text-muted-foreground text-right">
                       {episodes.length} episódio{episodes.length !== 1 ? 's' : ''} no total
                     </p>
                   </div>

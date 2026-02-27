@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAuth } from '@/lib/rbac'
+import { requireAdmin, requireAuth } from '@/lib/rbac'
 import { EpisodesUpdateSchema } from '@/lib/validators'
 
 // PATCH: add-only (sem apagar existentes)
@@ -40,6 +40,51 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await prisma.title.update({ where: { id: params.id }, data: updateData })
     }
   }
+
+  const episodes = await prisma.titleEpisode.findMany({
+    where: { titleId: params.id },
+    orderBy: [{ season: 'asc' }, { episode: 'asc' }],
+  })
+
+  return NextResponse.json({ episodes })
+}
+
+// DELETE: remove episódio específico ou temporada inteira
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const { error } = await requireAdmin()
+  if (error) return error
+
+  const title = await prisma.title.findUnique({ where: { id: params.id } })
+  if (!title) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const body = await req.json()
+  const season = typeof body.season === 'number' ? body.season : null
+  const episode = typeof body.episode === 'number' ? body.episode : null
+
+  if (season === null) {
+    return NextResponse.json({ error: 'season is required' }, { status: 400 })
+  }
+
+  if (episode !== null) {
+    await prisma.titleEpisode.deleteMany({
+      where: { titleId: params.id, season, episode },
+    })
+  } else {
+    await prisma.titleEpisode.deleteMany({
+      where: { titleId: params.id, season },
+    })
+  }
+
+  // Recalculate tvSeasons after deletion
+  const remaining = await prisma.titleEpisode.findMany({
+    where: { titleId: params.id },
+    select: { season: true },
+  })
+  const maxSeason = remaining.length > 0 ? Math.max(...remaining.map(e => e.season)) : 0
+  await prisma.title.update({
+    where: { id: params.id },
+    data: { tvSeasons: maxSeason > 0 ? maxSeason : null },
+  })
 
   const episodes = await prisma.titleEpisode.findMany({
     where: { titleId: params.id },
