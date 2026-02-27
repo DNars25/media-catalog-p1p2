@@ -579,27 +579,25 @@ function NovaAtualizacaoModal({
               </div>
             </div>
 
-            {/* EpisodeGrid */}
-            {(Object.keys(tmdbSeasons).length > 0 || savedEpisodes.length > 0) && (
-              <div>
-                <label className="text-xs text-zinc-400 block mb-2">
-                  Episódios
-                  <span className="ml-2 text-zinc-600 font-normal">(laranja = já no servidor · verde = adicionando)</span>
-                </label>
-                <EpisodeGrid
-                  savedEpisodes={savedEpisodes}
-                  tmdbSeasons={tmdbSeasons}
-                  selectedNew={selectedNew}
-                  onToggleNew={toggleNew}
-                  onSelectAllNew={selectAllNew}
-                  onClearNew={clearNew}
-                  selectedSeason={selectedSeason}
-                  onSeasonChange={setSelectedSeason}
-                  manualSeasonCounts={manualSeasonCounts}
-                  onManualCount={(season, count) => setManualSeasonCounts(prev => ({ ...prev, [season]: count }))}
-                />
-              </div>
-            )}
+            {/* EpisodeGrid — sempre visível */}
+            <div>
+              <label className="text-xs text-zinc-400 block mb-2">
+                Episódios
+                <span className="ml-2 text-zinc-600 font-normal">(laranja = já no servidor · verde = adicionando)</span>
+              </label>
+              <EpisodeGrid
+                savedEpisodes={savedEpisodes}
+                tmdbSeasons={tmdbSeasons}
+                selectedNew={selectedNew}
+                onToggleNew={toggleNew}
+                onSelectAllNew={selectAllNew}
+                onClearNew={clearNew}
+                selectedSeason={selectedSeason}
+                onSeasonChange={setSelectedSeason}
+                manualSeasonCounts={manualSeasonCounts}
+                onManualCount={(season, count) => setManualSeasonCounts(prev => ({ ...prev, [season]: count }))}
+              />
+            </div>
 
             {/* Áudio */}
             <div>
@@ -1006,8 +1004,7 @@ function SerieModal({
           <div className="px-6 pb-4 border-t border-zinc-700 pt-4 space-y-4">
             <p className="text-sm font-semibold text-white">Registrar Atualização</p>
 
-            {(Object.keys(tmdbSeasons).length > 0 || savedEpisodes.length > 0) && (
-              <div>
+            <div>
                 <label className="text-xs text-zinc-400 block mb-2">
                   Episódios <span className="ml-2 text-zinc-600 font-normal">(laranja = já no servidor · verde = adicionando)</span>
                 </label>
@@ -1024,7 +1021,6 @@ function SerieModal({
                   onManualCount={(season, count) => setManualSeasonCounts(prev => ({ ...prev, [season]: count }))}
                 />
               </div>
-            )}
 
             <div>
               <label className="text-xs text-zinc-400 block mb-1">Tipo de Áudio</label>
