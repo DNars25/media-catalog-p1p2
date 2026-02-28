@@ -42,6 +42,7 @@ export const RequestCreateSchema = z.object({
   linkedTitleId: z.string().uuid().optional().nullable(),
   source: z.enum(['ADMIN', 'VITRINE', 'PEDIDO']).default('ADMIN'),
   status: z.enum(['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO', 'CONCLUIDO', 'REJEITADO']).optional(),
+  priority: z.boolean().default(false),
 })
 
 export const RequestUpdateSchema = z.object({
@@ -50,6 +51,7 @@ export const RequestUpdateSchema = z.object({
   linkedTitleId: z.string().uuid().optional().nullable(),
   audioType: z.string().optional().nullable(),
   seasonNumber: z.number().int().optional().nullable(),
+  priority: z.boolean().optional(),
 })
 
 export const UserCreateSchema = z.object({

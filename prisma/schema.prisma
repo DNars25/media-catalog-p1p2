@@ -122,6 +122,7 @@ model Request {
   linkedTitleId    String?
   linkedTitle      Title?          @relation(fields: [linkedTitleId], references: [id])
   source           String          @default("ADMIN")
+  priority         Boolean         @default(false)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 

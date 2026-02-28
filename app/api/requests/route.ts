@@ -29,12 +29,22 @@ export async function GET(req: NextRequest) {
   const isUpdate = sp.get("isUpdate")
   if (isUpdate === "true") where.isUpdate = true
   if (isUpdate === "false") where.isUpdate = false
+  const priority = sp.get("priority")
+  if (priority === "true") where.priority = true
+  const from = sp.get("from")
+  const to = sp.get("to")
+  if (from || to) {
+    where.createdAt = {
+      ...(from ? { gte: new Date(from) } : {}),
+      ...(to ? { lte: new Date(to) } : {}),
+    }
+  }
 
   const [total, requests] = await Promise.all([
     prisma.request.count({ where }),
     prisma.request.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       skip,
       take: limit,
       include: {
@@ -55,7 +65,7 @@ export async function POST(req: NextRequest) {
   const parsed = RequestCreateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId, source, status } = parsed.data
+  const { requestedTitle, type, notes, preferredSystem, tmdbId, posterUrl, isUpdate, seasonNumber, audioType, linkedTitleId, source, status, priority } = parsed.data
 
   const request = await prisma.request.create({
     data: {
@@ -70,6 +80,7 @@ export async function POST(req: NextRequest) {
       audioType: audioType ?? null,
       linkedTitleId: linkedTitleId ?? null,
       source,
+      priority,
       createdById: session!.user.id,
       ...(status ? { status } : {}),
     },
