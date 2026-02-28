@@ -55,9 +55,10 @@ model User {
   image        String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  titles       Title[]
-  requests     Request[]
-  auditLogs    AuditLog[]
+  titles             Title[]
+  requests           Request[]
+  completedRequests  Request[]  @relation("completedRequests")
+  auditLogs          AuditLog[]
 }
 
 model Title {
@@ -123,6 +124,8 @@ model Request {
   linkedTitle      Title?          @relation(fields: [linkedTitleId], references: [id])
   source           String          @default("ADMIN")
   priority         Boolean         @default(false)
+  completedById    String?
+  completedBy      User?           @relation("completedRequests", fields: [completedById], references: [id])
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 

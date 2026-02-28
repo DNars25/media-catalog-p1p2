@@ -23,9 +23,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json()
   const parsed = UpdateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  const isBeingConcluded = parsed.data.status === 'CONCLUIDO' && existing.status !== 'CONCLUIDO'
+
   const request = await prisma.request.update({
     where: { id: params.id },
-    data: parsed.data,
+    data: {
+      ...parsed.data,
+      ...(isBeingConcluded ? { completedById: session!.user.id } : {}),
+    },
   })
 
   logAudit({ entityType: 'Request', entityId: request.id, action: 'UPDATE', userId: session!.user.id, before: existing, after: request })
@@ -47,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   let savedToLibrary = false
   let saveError: string | null = null
 
-  if (parsed.data.status === 'CONCLUIDO' && existing.status !== 'CONCLUIDO') {
+  if (isBeingConcluded) {
     const newAudioType = parsed.data.audioType ?? existing.audioType ?? null
     const linkedId = parsed.data.linkedTitleId ?? existing.linkedTitleId
 

@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       include: {
         createdBy: { select: { name: true, email: true } },
         linkedTitle: { select: { id: true, title: true } },
+        completedBy: { select: { name: true } },
       },
     }),
   ])

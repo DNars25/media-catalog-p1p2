@@ -23,6 +23,7 @@ interface Request {
   priority: boolean
   createdAt: string
   createdBy: { name: string }
+  completedBy: { name: string } | null
   linkedTitle: { id: string; title: string } | null
 }
 
@@ -74,6 +75,7 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(false)
   const [viewFilter, setViewFilter] = useState<ViewFilter>('todos')
+  const [completedByFilter, setCompletedByFilter] = useState<string>('')
 
   const fetchExtrato = useCallback(async () => {
     if (!from || !to) return
@@ -90,9 +92,19 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => { fetchExtrato() }, [fetchExtrato])
 
+  // Unique handlers (users who completed at least one request in the period)
+  const handlers = Array.from(
+    new Map(
+      requests
+        .filter(r => r.completedBy)
+        .map(r => [r.completedBy!.name, r.completedBy!.name])
+    ).values()
+  ).sort()
+
   const displayed = requests.filter(r => {
-    if (viewFilter === 'concluidos') return r.status === 'CONCLUIDO'
-    if (viewFilter === 'aberto') return r.status === 'ABERTO' || r.status === 'EM_PROGRESSO'
+    if (viewFilter === 'concluidos') { if (r.status !== 'CONCLUIDO') return false }
+    else if (viewFilter === 'aberto') { if (r.status !== 'ABERTO' && r.status !== 'EM_PROGRESSO') return false }
+    if (completedByFilter && r.completedBy?.name !== completedByFilter) return false
     return true
   })
 
@@ -116,6 +128,7 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
         <td>${r.priority ? '🔴 ' : ''}${r.requestedTitle}</td>
         <td>${r.type === 'MOVIE' ? 'Filme' : 'Série'}</td>
         <td>${STATUS_LABELS[r.status] || r.status}</td>
+        <td>${r.completedBy?.name ?? '—'}</td>
         <td>${r.createdBy.name}</td>
         <td>${fmtDate(r.createdAt)}</td>
       </tr>`).join('')
@@ -147,7 +160,7 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
         <div class="stat"><div class="stat-v">${stats.filmes}</div><div class="stat-l">Filmes</div></div>
         <div class="stat"><div class="stat-v">${stats.series}</div><div class="stat-l">Séries</div></div>
       </div>
-      <table><thead><tr><th>Título</th><th>Tipo</th><th>Status</th><th>Autor</th><th>Data</th></tr></thead>
+      <table><thead><tr><th>Título</th><th>Tipo</th><th>Status</th><th>Concluído por</th><th>Solicitado por</th><th>Data</th></tr></thead>
       <tbody>${rows}</tbody></table>
       </body></html>`)
     win.document.close()
@@ -183,6 +196,23 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
             <Printer className="w-3.5 h-3.5" /> Imprimir / PDF
           </button>
         </div>
+
+        {/* Completed by filter */}
+        {handlers.length > 0 && (
+          <div className="px-5 py-3 border-b border-border flex items-center gap-3 flex-wrap">
+            <span className="text-xs text-muted-foreground font-medium shrink-0">Atendido por:</span>
+            <button onClick={() => setCompletedByFilter('')}
+              className={"px-3 py-1 rounded-full text-xs font-medium transition border " + (!completedByFilter ? "bg-primary border-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground")}>
+              Todos
+            </button>
+            {handlers.map(name => (
+              <button key={name} onClick={() => setCompletedByFilter(completedByFilter === name ? '' : name)}
+                className={"px-3 py-1 rounded-full text-xs font-medium transition border " + (completedByFilter === name ? "bg-primary border-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground")}>
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* View filter */}
         <div className="px-5 py-3 border-b border-border flex gap-2">
