@@ -223,7 +223,17 @@ export default function VitrinePage() {
     : `Buscar ${typeLabel} no catálogo...`
 
   return (
-    <div className="min-h-screen px-4 py-8" style={{ backgroundColor: '#080808' }}>
+    <div
+      className="min-h-screen px-4 py-8"
+      style={{
+        backgroundColor: '#080808',
+        backgroundImage: 'url(/layout/Layout-1.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
       <div className="max-w-xl mx-auto">
 
         {/* Logo */}
