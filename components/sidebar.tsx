@@ -103,7 +103,7 @@ export function Sidebar() {
       <div className='md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2.5 border-b border-border' style={{ backgroundColor: '#050d18' }}>
         <img src='/nars-logo.png' alt='Encoding Solutions' className='h-8 w-auto object-contain' />
         <div className='flex items-center gap-1'>
-          <NotificationBell />
+          <NotificationBell placement="topbar" />
           <button onClick={toggleOpen} className='text-white p-2 rounded-lg hover:bg-white/10 transition-colors' aria-label="Menu">
             <Menu className='w-6 h-6' />
           </button>

@@ -22,7 +22,9 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d`
 }
 
-export function NotificationBell() {
+// placement='sidebar' → abre para cima, alinhado à esquerda (footer da sidebar)
+// placement='topbar'  → abre para baixo, alinhado à direita (barra mobile)
+export function NotificationBell({ placement = 'sidebar' }: { placement?: 'sidebar' | 'topbar' }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unread, setUnread] = useState(0)
   const [open, setOpen] = useState(false)
@@ -83,8 +85,14 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border shadow-xl z-50 overflow-hidden"
-          style={{ backgroundColor: '#050d18' }}>
+        <div
+          className={`absolute w-80 rounded-xl border border-border shadow-xl z-50 overflow-hidden ${
+            placement === 'sidebar'
+              ? 'left-0 bottom-full mb-2'
+              : 'right-0 top-full mt-2'
+          }`}
+          style={{ backgroundColor: '#050d18' }}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <p className="text-sm font-semibold">Notificações</p>
             <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
