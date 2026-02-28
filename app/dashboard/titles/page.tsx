@@ -48,6 +48,7 @@ export default function TitlesPage() {
   const [filterP2, setFilterP2] = useState('')
   const [filterAudio, setFilterAudio] = useState("")
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterNoServer, setFilterNoServer] = useState(false)
 
   const [editTitle, setEditTitle] = useState<Title | null>(null)
 
@@ -58,8 +59,10 @@ export default function TitlesPage() {
       limit: '20',
       ...(search && { search }),
       ...(filterType && { type: filterType }),
-      ...(filterP1 && { p1: filterP1 }),
-      ...(filterP2 && { p2: filterP2 }),
+      ...(filterNoServer ? { p1: 'false', p2: 'false' } : {
+        ...(filterP1 && { p1: filterP1 }),
+        ...(filterP2 && { p2: filterP2 }),
+      }),
       ...(filterAudio && { audioType: filterAudio }),
       ...(filterStatus && { internalStatus: filterStatus }),
     })
@@ -69,7 +72,7 @@ export default function TitlesPage() {
     setTotal(data.total || 0)
     setPages(data.pages || 1)
     setLoading(false)
-  }, [page, search, filterType, filterP1, filterP2, filterAudio, filterStatus])
+  }, [page, search, filterType, filterP1, filterP2, filterAudio, filterStatus, filterNoServer])
 
   useEffect(() => {
     const t = setTimeout(fetchTitles, search ? 300 : 0)
@@ -118,6 +121,17 @@ export default function TitlesPage() {
         </button>
         <button onClick={() => { setFilterP2(filterP2 === "true" ? "" : "true"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterP2 === "true" ? "bg-blue-600 border-blue-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
           Serv P2B
+        </button>
+        <button
+          onClick={() => {
+            setFilterNoServer(v => !v)
+            setFilterP1('')
+            setFilterP2('')
+            setPage(1)
+          }}
+          className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterNoServer ? "bg-yellow-500 border-yellow-500 text-black" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}
+        >
+          ⚠ Sem Servidor
         </button>
         <button onClick={() => { setFilterAudio(filterAudio === "DUBLADO" ? "" : "DUBLADO"); setPage(1); }} className={"px-4 py-2 rounded-lg text-sm font-medium transition border " + (filterAudio === "DUBLADO" ? "bg-purple-600 border-purple-600 text-white" : "border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500")}>
           Dublado
