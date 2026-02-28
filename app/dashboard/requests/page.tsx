@@ -65,12 +65,15 @@ function getWeekRange() {
   return { from: fmt(mon), to: fmt(sun) }
 }
 
+type ViewFilter = 'todos' | 'concluidos' | 'aberto'
+
 function ExtratoModal({ onClose }: { onClose: () => void }) {
   const week = getWeekRange()
   const [from, setFrom] = useState(week.from)
   const [to, setTo] = useState(week.to)
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(false)
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('todos')
 
   const fetchExtrato = useCallback(async () => {
     if (!from || !to) return
@@ -87,6 +90,12 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => { fetchExtrato() }, [fetchExtrato])
 
+  const displayed = requests.filter(r => {
+    if (viewFilter === 'concluidos') return r.status === 'CONCLUIDO'
+    if (viewFilter === 'aberto') return r.status === 'ABERTO' || r.status === 'EM_PROGRESSO'
+    return true
+  })
+
   const stats = {
     total: requests.length,
     aberto: requests.filter(r => r.status === 'ABERTO').length,
@@ -98,9 +107,11 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
     series: requests.filter(r => r.type === 'TV').length,
   }
 
+  const viewFilterLabel = viewFilter === 'concluidos' ? 'Concluídos' : viewFilter === 'aberto' ? 'Em Aberto' : 'Todos'
+
   function handlePrint() {
     const fmtDate = (s: string) => new Date(s).toLocaleDateString('pt-BR')
-    const rows = requests.map(r => `
+    const rows = displayed.map(r => `
       <tr>
         <td>${r.priority ? '🔴 ' : ''}${r.requestedTitle}</td>
         <td>${r.type === 'MOVIE' ? 'Filme' : 'Série'}</td>
@@ -124,8 +135,8 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
         td{padding:7px 10px;border-bottom:1px solid #e5e7eb}
         tr:last-child td{border-bottom:none}
       </style></head><body>
-      <h1>Extrato de Pedidos</h1>
-      <p class="sub">Período: ${fmtDate(from)} — ${fmtDate(to)}</p>
+      <h1>Extrato de Pedidos — ${viewFilterLabel}</h1>
+      <p class="sub">Período: ${fmtDate(from)} — ${fmtDate(to)} · ${displayed.length} pedido${displayed.length !== 1 ? 's' : ''}</p>
       <div class="stats">
         <div class="stat"><div class="stat-v">${stats.total}</div><div class="stat-l">Total</div></div>
         <div class="stat"><div class="stat-v">${stats.concluido}</div><div class="stat-l">Concluídos</div></div>
@@ -167,10 +178,24 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
             <input type="date" value={to} onChange={e => setTo(e.target.value)}
               className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
           </div>
-          <button onClick={handlePrint} disabled={loading || requests.length === 0}
+          <button onClick={handlePrint} disabled={loading || displayed.length === 0}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition ml-auto">
             <Printer className="w-3.5 h-3.5" /> Imprimir / PDF
           </button>
+        </div>
+
+        {/* View filter */}
+        <div className="px-5 py-3 border-b border-border flex gap-2">
+          {([
+            { v: 'todos', l: 'Todos', count: requests.length },
+            { v: 'concluidos', l: 'Concluídos', count: stats.concluido },
+            { v: 'aberto', l: 'Em Aberto', count: stats.aberto + stats.emProgresso },
+          ] as { v: ViewFilter; l: string; count: number }[]).map(({ v, l, count }) => (
+            <button key={v} onClick={() => setViewFilter(v)}
+              className={"px-3 py-1.5 rounded-full text-sm font-medium transition border " + (viewFilter === v ? "bg-primary border-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground")}>
+              {l} <span className="ml-1 opacity-70">{count}</span>
+            </button>
+          ))}
         </div>
 
         {loading ? (
@@ -198,9 +223,9 @@ function ExtratoModal({ onClose }: { onClose: () => void }) {
 
             {/* List */}
             <div className="divide-y divide-border max-h-64 overflow-y-auto">
-              {requests.length === 0 ? (
-                <p className="text-center text-muted-foreground text-sm py-8">Nenhum pedido no período selecionado</p>
-              ) : requests.map(r => (
+              {displayed.length === 0 ? (
+                <p className="text-center text-muted-foreground text-sm py-8">Nenhum pedido neste filtro</p>
+              ) : displayed.map(r => (
                 <div key={r.id} className="flex items-center gap-3 px-5 py-2.5">
                   {r.priority && <Flame className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                   <div className="flex-1 min-w-0">
