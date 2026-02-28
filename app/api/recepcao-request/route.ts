@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logAudit } from '@/lib/audit'
 import { sendPublicRequestCreated } from '@/lib/email'
+import { createNotification } from '@/lib/notifications'
 
 const VALID_TYPES = ['MOVIE', 'TV']
 
@@ -35,6 +36,11 @@ export async function POST(req: Request) {
     })
 
     logAudit({ entityType: 'Request', entityId: request.id, action: 'CREATE_PUBLIC', userId: systemUserId, after: request })
+    createNotification(
+      'PEDIDO',
+      `Novo pedido: ${title}`,
+      `${type === 'MOVIE' ? 'Filme' : 'Série'} solicitado via Vitrine`
+    )
 
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } })
     sendPublicRequestCreated({

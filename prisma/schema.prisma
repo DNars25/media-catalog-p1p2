@@ -132,6 +132,16 @@ model Request {
   @@index([type, status])
 }
 
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // 'PEDIDO' | 'CORRECAO'
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model AuditLog {
   id         String   @id @default(uuid())
   entityType String

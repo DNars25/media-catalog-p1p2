@@ -4,6 +4,7 @@ import { requireAuth, requireAdmin } from '@/lib/rbac'
 import { Prisma, TitleType, PreferredSystem, RequestStatus } from '@prisma/client'
 import { logAudit } from '@/lib/audit'
 import { sendPublicRequestCreated } from '@/lib/email'
+import { createNotification } from '@/lib/notifications'
 
 async function getSystemUserId(): Promise<string | null> {
   if (process.env.RECEPCAO_USER_ID) return process.env.RECEPCAO_USER_ID
@@ -102,6 +103,11 @@ export async function POST(req: Request) {
     })
 
     logAudit({ entityType: 'Request', entityId: correction.id, action: 'CREATE_CORRECTION', userId: systemUserId, after: correction })
+    createNotification(
+      'CORRECAO',
+      `Correção reportada: ${title}`,
+      `${type === 'MOVIE' ? 'Filme' : 'Série'} reportado via Vitrine`
+    )
 
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } })
     sendPublicRequestCreated({

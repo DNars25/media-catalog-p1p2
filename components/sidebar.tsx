@@ -5,6 +5,7 @@ import { signOut, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database, BarChart2, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { NotificationBell } from '@/components/notification-bell'
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/titles/new', icon: PlusCircle, label: 'Cadastrar Título' },
@@ -88,19 +89,25 @@ export function Sidebar() {
           <p className='text-xs text-muted-foreground truncate'>{session?.user?.role}</p>
         </div>
       </div>
-      <button onClick={() => signOut({ callbackUrl: '/login' })} className='w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all'>
-        <LogOut className='w-4 h-4' />
-        Sair
-      </button>
+      <div className='flex items-center gap-1 px-1'>
+        <NotificationBell />
+        <button onClick={() => signOut({ callbackUrl: '/login' })} className='flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all'>
+          <LogOut className='w-4 h-4' />
+          Sair
+        </button>
+      </div>
     </div>
   )
   return (
     <div>
       <div className='md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2.5 border-b border-border' style={{ backgroundColor: '#050d18' }}>
         <img src='/nars-logo.png' alt='Encoding Solutions' className='h-8 w-auto object-contain' />
-        <button onClick={toggleOpen} className='text-white p-2 rounded-lg hover:bg-white/10 transition-colors' aria-label="Menu">
-          <Menu className='w-6 h-6' />
-        </button>
+        <div className='flex items-center gap-1'>
+          <NotificationBell />
+          <button onClick={toggleOpen} className='text-white p-2 rounded-lg hover:bg-white/10 transition-colors' aria-label="Menu">
+            <Menu className='w-6 h-6' />
+          </button>
+        </div>
       </div>
       {open && <div className='md:hidden fixed inset-0 z-40 bg-black/60' onClick={toggleOpen} />}
       <div className={cn('md:hidden fixed top-0 left-0 h-full w-[85vw] max-w-72 z-50 transform transition-transform duration-300 flex flex-col', open ? 'translate-x-0' : '-translate-x-full')} style={{ backgroundColor: '#050d18' }}>
