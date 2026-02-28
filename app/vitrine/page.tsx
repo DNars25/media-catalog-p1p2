@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Search, Film, Tv, CheckCircle, XCircle, Send, ArrowLeft, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { Search, Film, Tv, CheckCircle, XCircle, Send, Loader2 } from 'lucide-react'
 
 type Mode = 'pedido' | 'correcao'
 type ContentType = 'MOVIE' | 'TV'
@@ -425,11 +424,6 @@ export default function VitrinePage() {
           </div>
         )}
 
-        <div className="text-center mt-6">
-          <Link href="/login" className="text-sm text-gray-600 hover:text-gray-400 flex items-center justify-center gap-1 transition">
-            <ArrowLeft className="w-3 h-3" /> Voltar ao login
-          </Link>
-        </div>
       </div>
     </div>
   )
