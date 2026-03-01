@@ -493,15 +493,13 @@ export default function CorrecoesPage() {
           </h1>
           <p className='text-muted-foreground text-sm mt-1'>Problemas reportados pelos usuários via Vitrine</p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => setShowModal(true)}
-            className='flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 transition text-sm font-medium flex-shrink-0'
-          >
-            <Plus className='w-4 h-4' />
-            Nova Correção
-          </button>
-        )}
+        <button
+          onClick={() => setShowModal(true)}
+          className='flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 transition text-sm font-medium flex-shrink-0'
+        >
+          <Plus className='w-4 h-4' />
+          Nova Correção
+        </button>
       </div>
 
       <div className='flex gap-2 flex-wrap mb-6'>
