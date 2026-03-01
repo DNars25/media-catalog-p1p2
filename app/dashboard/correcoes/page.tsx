@@ -96,6 +96,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
 
   function selectItem(item: LocalItem) {
     setSelected(item)
+    setType(item.type as 'MOVIE' | 'TV')
     const servers: ('B2P' | 'P2B')[] = []
     if (item.hasP1) servers.push('B2P')
     if (item.hasP2) servers.push('P2B')
@@ -118,7 +119,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
           type,
           server,
           notes: 'Offline',
-          seasonNumber: season || null,
+          seasonNumber: season ? parseInt(season) : null,
           episodeNotes: episodes || null,
         }),
       })
@@ -163,7 +164,8 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 <button
                   key={t}
                   onClick={() => { setType(t); setResults(null); setSelected(null) }}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition border ${type === t ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground'}`}
+                  disabled={selected !== null}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition border disabled:opacity-50 disabled:cursor-not-allowed ${type === t ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground'}`}
                 >
                   {t === 'MOVIE' ? 'Filme' : 'Série'}
                 </button>

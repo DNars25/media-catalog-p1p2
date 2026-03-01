@@ -96,9 +96,15 @@ function setCache<T>(key: string, data: T): void {
 
 async function tmdbFetch(path: string): Promise<unknown> {
   const url = `${TMDB_BASE}${path}${path.includes('?') ? '&' : '?'}api_key=${process.env.TMDB_API_KEY}&language=pt-BR`
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`TMDB error: ${res.status}`)
-  return res.json()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 5000)
+  try {
+    const res = await fetch(url, { signal: controller.signal })
+    if (!res.ok) throw new Error(`TMDB error: ${res.status}`)
+    return res.json()
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function mapTvStatus(status: string): 'EM_ANDAMENTO' | 'FINALIZADA' {

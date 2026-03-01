@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
   const { error } = await requireAuth()
   if (error) return error
 
+  try {
   const sp = req.nextUrl.searchParams
   const search = sp.get('search') || ''
   const statusFilter = sp.get('status') || ''
@@ -149,4 +150,7 @@ export async function GET(req: NextRequest) {
   }))
 
   return NextResponse.json({ series, total, page, limit, pages: Math.ceil(total / limit) })
+  } catch {
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
 }

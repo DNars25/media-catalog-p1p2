@@ -13,12 +13,11 @@ export async function GET(req: Request) {
     const tmdbType = type === 'MOVIE' ? 'movie' : 'tv'
     const localType = type === 'MOVIE' ? 'MOVIE' : 'TV'
 
-    const tmdbMatches = await searchTMDB(query, tmdbType as 'movie' | 'tv').catch(
-      () => [] as TmdbSearchResult[]
-    )
+    const [tmdbMatches, localTextIds] = await Promise.all([
+      searchTMDB(query, tmdbType as 'movie' | 'tv').catch(() => [] as TmdbSearchResult[]),
+      findTitleIdsByTextAndType(query, localType).catch(() => [] as string[]),
+    ])
     const tmdbIds = tmdbMatches.map(r => r.tmdbId)
-
-    const localTextIds = await findTitleIdsByTextAndType(query, localType).catch(() => [] as string[])
 
     const orConditions: { id?: { in: string[] }; tmdbId?: { in: number[] } }[] = []
     if (localTextIds.length > 0) orConditions.push({ id: { in: localTextIds } })

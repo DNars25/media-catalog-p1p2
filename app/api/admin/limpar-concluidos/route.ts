@@ -3,14 +3,17 @@ import { prisma } from '@/lib/db'
 import { requireSuperAdmin } from '@/lib/rbac'
 import { logAudit } from '@/lib/audit'
 import { Prisma } from '@prisma/client'
+import { LimparConcluidosSchema } from '@/lib/validators'
 
 export async function DELETE(req: NextRequest) {
   const { session, error } = await requireSuperAdmin()
   if (error) return error
 
   const body = await req.json()
-  const { scope } = body as { scope: string }
+  const parsed = LimparConcluidosSchema.safeParse(body)
+  if (!parsed.success) return NextResponse.json({ error: 'Escopo inválido' }, { status: 400 })
 
+  const { scope } = parsed.data
   const where: Prisma.RequestWhereInput = { status: 'CONCLUIDO' }
 
   if (scope === 'corrections') {
@@ -20,19 +23,21 @@ export async function DELETE(req: NextRequest) {
     where.isUpdate = false
   } else if (scope === 'atualizacoes') {
     where.isUpdate = true
-  } else {
-    return NextResponse.json({ error: 'Escopo inválido' }, { status: 400 })
   }
 
-  const { count } = await prisma.request.deleteMany({ where })
+  try {
+    const { count } = await prisma.request.deleteMany({ where })
 
-  logAudit({
-    entityType: 'Request',
-    entityId: scope,
-    action: 'BULK_DELETE_CONCLUIDOS',
-    userId: session!.user.id,
-    after: { scope, deleted: count },
-  })
+    logAudit({
+      entityType: 'Request',
+      entityId: scope,
+      action: 'BULK_DELETE_CONCLUIDOS',
+      userId: session!.user.id,
+      after: { scope, deleted: count },
+    })
 
-  return NextResponse.json({ deleted: count })
+    return NextResponse.json({ deleted: count })
+  } catch {
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
 }

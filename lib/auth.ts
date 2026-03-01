@@ -3,6 +3,8 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 
+const ROLE_REFRESH_INTERVAL = 60 * 60 * 1000 // 1 hour
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
@@ -33,6 +35,17 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = user.role
+        token.roleRefreshedAt = Date.now()
+      } else if (
+        token.id &&
+        (!token.roleRefreshedAt || Date.now() - token.roleRefreshedAt > ROLE_REFRESH_INTERVAL)
+      ) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        })
+        if (dbUser) token.role = dbUser.role
+        token.roleRefreshedAt = Date.now()
       }
       return token
     },
@@ -40,7 +53,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id = token.id as string
         session.user.role = token.role as string
-              }
+      }
       return session
     },
   },

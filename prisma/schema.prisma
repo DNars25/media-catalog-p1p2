@@ -45,6 +45,12 @@ enum PreferredSystem {
   AMBOS
 }
 
+enum RequestSource {
+  ADMIN
+  VITRINE
+  PEDIDO
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -122,7 +128,7 @@ model Request {
   seasonNumber     Int?
   linkedTitleId    String?
   linkedTitle      Title?          @relation(fields: [linkedTitleId], references: [id])
-  source           String          @default("ADMIN")
+  source           RequestSource   @default(ADMIN)
   priority         Boolean         @default(false)
   completedById    String?
   completedBy      User?           @relation("completedRequests", fields: [completedById], references: [id])
@@ -134,6 +140,7 @@ model Request {
   @@index([createdById])
   @@index([linkedTitleId])
   @@index([type, status])
+  @@index([isCorrection, status])
 }
 
 model Notification {

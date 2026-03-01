@@ -68,3 +68,25 @@ export const UserUpdateSchema = z.object({
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'USER']).optional(),
   password: z.string().min(6).optional(),
 })
+
+export const CorrecoesCreateSchema = z.object({
+  title: z.string().min(1).max(255),
+  type: z.enum(['MOVIE', 'TV']),
+  tmdbId: z.number().int().positive().optional().nullable(),
+  posterUrl: z.string().url().optional().nullable(),
+  server: z.enum(['B2P', 'P2B']).optional().nullable(),
+  notes: z.string().min(1).max(1000),
+  seasonNumber: z.number().int().positive().optional().nullable(),
+  episodeNotes: z.string().max(200).optional().nullable(),
+})
+
+export const RecepcaoRequestSchema = z.object({
+  title: z.string().min(1).max(255),
+  type: z.enum(['MOVIE', 'TV']),
+  tmdbId: z.number().int().positive().optional().nullable(),
+  posterUrl: z.string().url().optional().nullable(),
+})
+
+export const LimparConcluidosSchema = z.object({
+  scope: z.enum(['corrections', 'requests', 'atualizacoes']),
+})
