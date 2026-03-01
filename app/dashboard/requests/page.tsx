@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Plus, Loader2, ChevronLeft, ChevronRight, X, Search, Pencil, FileText, Flame, Printer } from 'lucide-react'
+import { Plus, Loader2, ChevronLeft, ChevronRight, X, Search, Pencil, FileText, Flame, Printer, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/badges'
 import { SearchInput } from '@/components/search-input'
 import { formatDate } from '@/lib/utils'
@@ -370,6 +370,7 @@ function AudioTVModal({ current, onConfirm, onCancel }: { current?: string | nul
 export default function RequestsPage() {
   const { data: session } = useSession()
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
   const [requests, setRequests] = useState<Request[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -389,6 +390,8 @@ export default function RequestsPage() {
     priority: false,
   })
   const [formLoading, setFormLoading] = useState(false)
+  const [confirmLimpar, setConfirmLimpar] = useState(false)
+  const [limparLoading, setLimparLoading] = useState(false)
   const [tmdbQuery, setTmdbQuery] = useState('')
   const [tmdbResults, setTmdbResults] = useState<TMDBResult[]>([])
   const [tmdbSearching, setTmdbSearching] = useState(false)
@@ -518,7 +521,40 @@ export default function RequestsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">Pedidos</h1>
           <p className="text-muted-foreground mt-1">{total} pedidos</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {isSuperAdmin && (
+            confirmLimpar ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Apagar todos os concluídos?</span>
+                <button onClick={() => setConfirmLimpar(false)} className="px-3 py-1.5 rounded-lg text-xs border border-border text-muted-foreground hover:bg-secondary transition">Cancelar</button>
+                <button
+                  onClick={async () => {
+                    setLimparLoading(true)
+                    try {
+                      const res = await fetch('/api/admin/limpar-concluidos', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: 'requests' }) })
+                      const d = await res.json()
+                      toast.success(`${d.deleted} pedido(s) removido(s)`)
+                      setConfirmLimpar(false)
+                      fetch_()
+                    } catch { toast.error('Erro ao limpar') }
+                    finally { setLimparLoading(false) }
+                  }}
+                  disabled={limparLoading}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive/30 transition font-medium disabled:opacity-50"
+                >
+                  {limparLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirmar'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmLimpar(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5 transition text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpar Concluídos
+              </button>
+            )
+          )}
           <button onClick={() => setShowExtrato(true)}
             className="flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-secondary transition-colors text-muted-foreground">
             <FileText className="w-4 h-4" /> Extrato

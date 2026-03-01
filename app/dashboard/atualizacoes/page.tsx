@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Lock, Plus, Search, X } from 'lucide-react'
+import { Lock, Plus, Search, X, Trash2, Loader2 } from 'lucide-react'
 
 interface TitleEpisode {
   season: number
@@ -1141,12 +1141,15 @@ export default function AtualizacoesPage() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<SerieCard | null>(null)
   const [showNovaModal, setShowNovaModal] = useState(false)
+  const [confirmLimpar, setConfirmLimpar] = useState(false)
+  const [limparLoading, setLimparLoading] = useState(false)
   const [filtroStatus, setFiltroStatus] = useState('EM_ANDAMENTO')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
   const userId = session?.user?.id || ''
 
   const fetchSeries = useCallback(() => {
@@ -1187,15 +1190,51 @@ export default function AtualizacoesPage() {
             {total} {filterDesc[filtroStatus] || 'resultados'}
           </p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => setShowNovaModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Atualização
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isSuperAdmin && (
+            confirmLimpar ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400">Apagar todos os concluídos?</span>
+                <button onClick={() => setConfirmLimpar(false)} className="px-3 py-1.5 rounded-lg text-xs border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition">Cancelar</button>
+                <button
+                  onClick={async () => {
+                    setLimparLoading(true)
+                    try {
+                      const res = await fetch('/api/admin/limpar-concluidos', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: 'atualizacoes' }) })
+                      const d = await res.json()
+                      toast.success(`${d.deleted} atualização(ões) removida(s)`)
+                      setConfirmLimpar(false)
+                      fetchSeries()
+                    } catch { toast.error('Erro ao limpar') }
+                    finally { setLimparLoading(false) }
+                  }}
+                  disabled={limparLoading}
+                  className="px-3 py-1.5 rounded-lg text-xs bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition font-medium disabled:opacity-50"
+                >
+                  {limparLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirmar'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmLimpar(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-red-400 transition"
+                style={{ border: '1px solid #2a2a2a' }}
+              >
+                <Trash2 className="w-4 h-4" />
+                Limpar Concluídos
+              </button>
+            )
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setShowNovaModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Nova Atualização
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Busca */}

@@ -432,11 +432,14 @@ export default function CorrecoesPage() {
   const { data: session } = useSession()
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
   const userId = session?.user?.id || ''
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
   const [corrections, setCorrections] = useState<Correction[]>([])
   const [loading, setLoading] = useState(true)
   const [filterStatus, setFilterStatus] = useState('ABERTO')
   const [total, setTotal] = useState(0)
   const [showModal, setShowModal] = useState(false)
+  const [confirmLimpar, setConfirmLimpar] = useState(false)
+  const [limparLoading, setLimparLoading] = useState(false)
 
   const fetchCorrections = useCallback(() => {
     setLoading(true)
@@ -493,13 +496,48 @@ export default function CorrecoesPage() {
           </h1>
           <p className='text-muted-foreground text-sm mt-1'>Problemas reportados pelos usuários via Vitrine</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className='flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 transition text-sm font-medium flex-shrink-0'
-        >
-          <Plus className='w-4 h-4' />
-          Nova Correção
-        </button>
+        <div className='flex items-center gap-2 flex-shrink-0'>
+          {isSuperAdmin && (
+            confirmLimpar ? (
+              <div className='flex items-center gap-2'>
+                <span className='text-xs text-muted-foreground'>Apagar todos os concluídos?</span>
+                <button onClick={() => setConfirmLimpar(false)} className='px-3 py-1.5 rounded-lg text-xs border border-border text-muted-foreground hover:bg-secondary transition'>Cancelar</button>
+                <button
+                  onClick={async () => {
+                    setLimparLoading(true)
+                    try {
+                      const res = await fetch('/api/admin/limpar-concluidos', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scope: 'corrections' }) })
+                      const d = await res.json()
+                      toast.success(`${d.deleted} correção(ões) removida(s)`)
+                      setConfirmLimpar(false)
+                      fetchCorrections()
+                    } catch { toast.error('Erro ao limpar') }
+                    finally { setLimparLoading(false) }
+                  }}
+                  disabled={limparLoading}
+                  className='px-3 py-1.5 rounded-lg text-xs bg-destructive/20 text-destructive border border-destructive/30 hover:bg-destructive/30 transition font-medium disabled:opacity-50'
+                >
+                  {limparLoading ? <Loader2 className='w-3 h-3 animate-spin' /> : 'Confirmar'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmLimpar(true)}
+                className='flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5 transition text-sm font-medium'
+              >
+                <Trash2 className='w-4 h-4' />
+                Limpar Concluídos
+              </button>
+            )
+          )}
+          <button
+            onClick={() => setShowModal(true)}
+            className='flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 transition text-sm font-medium'
+          >
+            <Plus className='w-4 h-4' />
+            Nova Correção
+          </button>
+        </div>
       </div>
 
       <div className='flex gap-2 flex-wrap mb-6'>
