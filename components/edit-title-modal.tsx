@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Trash2 } from 'lucide-react'
+import { X, Loader2, Trash2, DatabaseZap } from 'lucide-react'
 
 interface TitleForModal {
   id: string
@@ -54,6 +54,7 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
   const [episodes, setEpisodes] = useState<TitleEpisode[]>([])
   const [loadingEps, setLoadingEps] = useState(false)
   const [deletingKey, setDeletingKey] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     if (title.type !== 'TV') return
@@ -108,6 +109,21 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
       toast.error('Erro ao remover temporada')
     } finally {
       setDeletingKey(null)
+    }
+  }
+
+  const handleSync = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch(`/api/titles/${title.id}/sync-episodes`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao sincronizar')
+      setEpisodes(data.episodes || [])
+      toast.success(`${data.totalCreated} episódios sincronizados via TMDB!`)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao sincronizar')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -210,7 +226,17 @@ export function EditTitleModal({ title, onClose, onSaved }: EditTitleModalProps)
                     <span className="text-xs">Carregando episódios...</span>
                   </div>
                 ) : episodes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic py-2">Nenhum episódio cadastrado na biblioteca.</p>
+                  <div className="flex flex-col gap-2 py-2">
+                    <p className="text-xs text-muted-foreground italic">Nenhum episódio cadastrado na biblioteca.</p>
+                    <button
+                      onClick={handleSync}
+                      disabled={syncing}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition disabled:opacity-50 self-start"
+                    >
+                      {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DatabaseZap className="w-3.5 h-3.5" />}
+                      {syncing ? 'Sincronizando...' : 'Sincronizar via TMDB'}
+                    </button>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {Object.entries(episodesBySeason)
