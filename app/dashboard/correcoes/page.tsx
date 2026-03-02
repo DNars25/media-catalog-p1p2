@@ -70,6 +70,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [results, setResults] = useState<LocalItem[] | null>(null)
   const [selected, setSelected] = useState<LocalItem | null>(null)
   const [server, setServer] = useState<'B2P' | 'P2B'>('B2P')
+  const [problemType, setProblemType] = useState<'offline' | 'outro'>('offline')
   const [problem, setProblem] = useState('')
   const [season, setSeason] = useState('')
   const [episodes, setEpisodes] = useState('')
@@ -100,6 +101,8 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
     if (item.hasP1) servers.push('B2P')
     if (item.hasP2) servers.push('P2B')
     setServer(servers[0] ?? 'B2P')
+    setProblemType('offline')
+    setProblem('')
     setSeason('')
     setEpisodes('')
   }
@@ -117,7 +120,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
           posterUrl: selected.posterUrl,
           type,
           server,
-          notes: problem,
+          notes: problemType === 'offline' ? 'Offline' : problem,
           seasonNumber: season ? parseInt(season) : null,
           episodeNotes: episodes || null,
         }),
@@ -244,17 +247,35 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 </div>
               </div>
 
-              {/* Descrição do problema */}
+              {/* Tipo do problema */}
               <div>
-                <p className='text-xs text-muted-foreground mb-1'>Descreva o problema <span className='text-destructive'>*</span></p>
-                <textarea
-                  value={problem}
-                  onChange={e => setProblem(e.target.value)}
-                  placeholder='Ex: Filme travando no minuto 30, áudio dessincronizado...'
-                  rows={3}
-                  className='w-full rounded-lg px-3 py-2 text-sm bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-ring resize-none'
-                />
+                <p className='text-xs text-muted-foreground mb-2'>Tipo do problema</p>
+                <div className='flex gap-2'>
+                  {(['offline', 'outro'] as const).map(pt => (
+                    <button
+                      key={pt}
+                      onClick={() => { setProblemType(pt); setProblem('') }}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition border ${problemType === pt ? 'bg-destructive/20 text-destructive border-destructive/40' : 'border-border text-muted-foreground hover:border-muted-foreground'}`}
+                    >
+                      {pt === 'offline' ? 'Offline' : 'Outro Problema'}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Descrição — apenas para Outro Problema */}
+              {problemType === 'outro' && (
+                <div>
+                  <p className='text-xs text-muted-foreground mb-1'>Descreva o problema <span className='text-destructive'>*</span></p>
+                  <textarea
+                    value={problem}
+                    onChange={e => setProblem(e.target.value)}
+                    placeholder='Ex: Áudio dessincronizado, legendas incorretas...'
+                    rows={3}
+                    className='w-full rounded-lg px-3 py-2 text-sm bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-ring resize-none'
+                  />
+                </div>
+              )}
 
               {/* Servidor */}
               <div>
@@ -312,7 +333,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!selected || problem.trim().length < 3 || submitting}
+            disabled={!selected || (problemType === 'outro' && problem.trim().length < 3) || submitting}
             className='flex-1 py-2 rounded-lg text-sm font-semibold bg-destructive text-destructive-foreground disabled:opacity-40 transition hover:bg-destructive/90'
           >
             {submitting ? <Loader2 className='w-4 h-4 animate-spin mx-auto' /> : 'Criar Correção'}

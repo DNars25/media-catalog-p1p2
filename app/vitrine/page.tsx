@@ -55,6 +55,7 @@ function CorrectForm({
   onCancel: () => void
   onSent: () => void
 }) {
+  const [problemType, setProblemType] = useState<'offline' | 'outro'>('offline')
   const [server, setServer] = useState<'B2P' | 'P2B'>('B2P')
   const [problem, setProblem] = useState('')
   const [season, setSeason] = useState('')
@@ -68,6 +69,8 @@ function CorrectForm({
   if (item.hasP2) servers.push('P2B')
   if (servers.length === 0) servers.push('B2P', 'P2B')
 
+  const canSubmit = problemType === 'offline' || problem.trim().length >= 3
+
   async function handleSubmit() {
     setLoading(true)
     try {
@@ -80,7 +83,7 @@ function CorrectForm({
           posterUrl: item.posterUrl,
           type,
           server,
-          notes: problem,
+          notes: problemType === 'offline' ? 'Offline' : problem,
           seasonNumber: season ? parseInt(season) : null,
           episodeNotes: episodes || null,
         }),
@@ -97,8 +100,27 @@ function CorrectForm({
   return (
     <div className="mt-2 rounded-xl p-4 space-y-3" style={{ backgroundColor: '#1a1010', border: '1px solid #3a1a1a' }}>
       <p className="text-sm font-semibold text-white">"{item.title}"</p>
+
+      {/* Tipo do problema */}
       <div>
-        <p className="text-xs text-gray-400 mb-2">Sistema offline</p>
+        <p className="text-xs text-gray-400 mb-2">Tipo do problema</p>
+        <div className="flex gap-2">
+          {(['offline', 'outro'] as const).map(pt => (
+            <button
+              key={pt}
+              onClick={() => { setProblemType(pt); setProblem('') }}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
+              style={{ backgroundColor: problemType === pt ? '#ef4444' : '#252525', border: problemType === pt ? '1px solid #ef4444' : '1px solid #2a2a2a' }}
+            >
+              {pt === 'offline' ? 'Offline' : 'Outro Problema'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Servidor */}
+      <div>
+        <p className="text-xs text-gray-400 mb-2">Sistema</p>
         <div className="flex gap-2">
           {servers.map(s => (
             <button
@@ -113,18 +135,22 @@ function CorrectForm({
         </div>
       </div>
 
-      <div>
-        <p className="text-xs text-gray-400 mb-1">Descreva o problema <span className="text-red-400">*</span></p>
-        <textarea
-          value={problem}
-          onChange={e => setProblem(e.target.value)}
-          placeholder="Ex: Filme travando no minuto 30, áudio dessincronizado..."
-          rows={3}
-          className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none"
-          style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
-        />
-      </div>
+      {/* Descrição — apenas para Outro Problema */}
+      {problemType === 'outro' && (
+        <div>
+          <p className="text-xs text-gray-400 mb-1">Descreva o problema <span className="text-red-400">*</span></p>
+          <textarea
+            value={problem}
+            onChange={e => setProblem(e.target.value)}
+            placeholder="Ex: Áudio dessincronizado, legendas incorretas..."
+            rows={3}
+            className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none"
+            style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+          />
+        </div>
+      )}
 
+      {/* Temporada / Episódios (somente TV) */}
       {type === 'TV' && (
         <div className="flex gap-2">
           <div className="flex-1">
@@ -165,7 +191,7 @@ function CorrectForm({
         </button>
         <button
           onClick={handleSubmit}
-          disabled={loading || problem.trim().length < 3}
+          disabled={loading || !canSubmit}
           className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
           style={{ backgroundColor: '#ef4444' }}
         >
