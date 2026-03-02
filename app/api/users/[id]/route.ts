@@ -45,14 +45,40 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const { error, session } = await requireSuperAdmin()
   if (error) return error
 
+  const adminId = session!.user.id
+
+  if (params.id === adminId) {
+    return NextResponse.json({ error: 'Não é possível deletar sua própria conta' }, { status: 400 })
+  }
+
   const existing = await prisma.user.findUnique({
     where: { id: params.id },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
   })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  await prisma.user.delete({ where: { id: params.id } })
-  logAudit({ entityType: 'User', entityId: params.id, action: 'DELETE', userId: session!.user.id, before: existing })
+  await prisma.$transaction([
+    // completedById é nullable — zera a referência
+    prisma.request.updateMany({
+      where: { completedById: params.id },
+      data: { completedById: null },
+    }),
+    // reassigna títulos e pedidos criados pelo usuário para o admin que está deletando
+    prisma.title.updateMany({
+      where: { createdById: params.id },
+      data: { createdById: adminId },
+    }),
+    prisma.request.updateMany({
+      where: { createdById: params.id },
+      data: { createdById: adminId },
+    }),
+    // deleta audit logs do usuário (pertencem a ele)
+    prisma.auditLog.deleteMany({ where: { userId: params.id } }),
+    // deleta o usuário
+    prisma.user.delete({ where: { id: params.id } }),
+  ])
+
+  logAudit({ entityType: 'User', entityId: params.id, action: 'DELETE', userId: adminId, before: existing })
 
   return NextResponse.json({ success: true })
 }
