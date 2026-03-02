@@ -56,6 +56,7 @@ function CorrectForm({
   onSent: () => void
 }) {
   const [server, setServer] = useState<'B2P' | 'P2B'>('B2P')
+  const [problem, setProblem] = useState('')
   const [season, setSeason] = useState('')
   const [episodes, setEpisodes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -79,8 +80,8 @@ function CorrectForm({
           posterUrl: item.posterUrl,
           type,
           server,
-          notes: 'Offline',
-          seasonNumber: season || null,
+          notes: problem,
+          seasonNumber: season ? parseInt(season) : null,
           episodeNotes: episodes || null,
         }),
       })
@@ -110,6 +111,18 @@ function CorrectForm({
             </button>
           ))}
         </div>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-400 mb-1">Descreva o problema <span className="text-red-400">*</span></p>
+        <textarea
+          value={problem}
+          onChange={e => setProblem(e.target.value)}
+          placeholder="Ex: Filme travando no minuto 30, áudio dessincronizado..."
+          rows={3}
+          className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none"
+          style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+        />
       </div>
 
       {type === 'TV' && (
@@ -152,7 +165,7 @@ function CorrectForm({
         </button>
         <button
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={loading || problem.trim().length < 3}
           className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
           style={{ backgroundColor: '#ef4444' }}
         >

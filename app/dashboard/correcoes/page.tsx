@@ -20,14 +20,12 @@ interface Correction {
 
 const statusColor: Record<string, string> = {
   ABERTO: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  EM_ANDAMENTO: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
   EM_PROGRESSO: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   CONCLUIDO: 'bg-green-500/20 text-green-400 border-green-500/30',
   REJEITADO: 'bg-red-500/20 text-red-400 border-red-500/30',
 }
 const statusLabel: Record<string, string> = {
   ABERTO: 'Aberto',
-  EM_ANDAMENTO: 'Em Andamento',
   EM_PROGRESSO: 'Em Progresso',
   CONCLUIDO: 'Resolvido',
   REJEITADO: 'Rejeitado',
@@ -72,6 +70,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
   const [results, setResults] = useState<LocalItem[] | null>(null)
   const [selected, setSelected] = useState<LocalItem | null>(null)
   const [server, setServer] = useState<'B2P' | 'P2B'>('B2P')
+  const [problem, setProblem] = useState('')
   const [season, setSeason] = useState('')
   const [episodes, setEpisodes] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -118,7 +117,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
           posterUrl: selected.posterUrl,
           type,
           server,
-          notes: 'Offline',
+          notes: problem,
           seasonNumber: season ? parseInt(season) : null,
           episodeNotes: episodes || null,
         }),
@@ -245,6 +244,18 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
                 </div>
               </div>
 
+              {/* Descrição do problema */}
+              <div>
+                <p className='text-xs text-muted-foreground mb-1'>Descreva o problema <span className='text-destructive'>*</span></p>
+                <textarea
+                  value={problem}
+                  onChange={e => setProblem(e.target.value)}
+                  placeholder='Ex: Filme travando no minuto 30, áudio dessincronizado...'
+                  rows={3}
+                  className='w-full rounded-lg px-3 py-2 text-sm bg-secondary border border-border focus:outline-none focus:ring-1 focus:ring-ring resize-none'
+                />
+              </div>
+
               {/* Servidor */}
               <div>
                 <p className='text-xs text-muted-foreground mb-2'>Sistema offline</p>
@@ -301,7 +312,7 @@ function NovaCorrecaoModal({ onClose, onCreated }: { onClose: () => void; onCrea
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!selected || submitting}
+            disabled={!selected || problem.trim().length < 3 || submitting}
             className='flex-1 py-2 rounded-lg text-sm font-semibold bg-destructive text-destructive-foreground disabled:opacity-40 transition hover:bg-destructive/90'
           >
             {submitting ? <Loader2 className='w-4 h-4 animate-spin mx-auto' /> : 'Criar Correção'}

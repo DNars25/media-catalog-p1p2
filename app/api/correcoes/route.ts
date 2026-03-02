@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     // Resolve preferredSystem para o enum do banco (P1/P2/AMBOS)
-    const systemMap: Record<string, PreferredSystem> = { B2P: 'P1', P2B: 'P2', Ambos: 'AMBOS' }
+    const systemMap: Record<string, PreferredSystem> = { B2P: 'P1', P2B: 'P2' }
     const preferredSystem: PreferredSystem | null = server ? (systemMap[server] ?? null) : null
 
     // Tenta linkar ao título existente no catálogo
