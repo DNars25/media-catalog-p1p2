@@ -24,6 +24,16 @@ export async function POST(request: NextRequest) {
   if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: 'Tipo nao permitido' }, { status: 400 })
   if (file.size > MAX_SIZE) return NextResponse.json({ error: 'Arquivo muito grande' }, { status: 400 })
 
+  // Valida magic bytes para evitar spoofing de Content-Type
+  const buf = Buffer.from(await file.arrayBuffer())
+  const isPng  = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47
+  const isJpeg = buf[0] === 0xFF && buf[1] === 0xD8
+  const isGif  = buf.slice(0, 3).toString('ascii') === 'GIF'
+  const isWebp = buf.length >= 12 && buf.slice(8, 12).toString('ascii') === 'WEBP'
+  if (!isPng && !isJpeg && !isGif && !isWebp) {
+    return NextResponse.json({ error: 'Arquivo inválido' }, { status: 400 })
+  }
+
   const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
   const filename = `avatars/${uid}-${Date.now()}.${ext}`
 

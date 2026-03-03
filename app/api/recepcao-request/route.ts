@@ -1,12 +1,17 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logAudit } from '@/lib/audit'
 import { sendPublicRequestCreated } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 import { RecepcaoRequestSchema } from '@/lib/validators'
 import { getSystemUserId } from '@/lib/system-user'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const ip = getClientIp(req)
+  if (!checkRateLimit(`recepcao:${ip}`, 5, 10 * 60_000)) {
+    return NextResponse.json({ error: 'Muitas solicitações. Tente novamente em 10 minutos.' }, { status: 429 })
+  }
   try {
     const body = await req.json()
     const parsed = RecepcaoRequestSchema.safeParse(body)

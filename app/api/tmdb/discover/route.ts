@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { requireAuth } from "@/lib/rbac";
 
 const TMDB_BASE = "https://api.themoviedb.org/3";
 const TMDB_KEY = process.env.TMDB_API_KEY;
@@ -18,6 +20,14 @@ interface TmdbDiscoverResponse {
 }
 
 export async function GET(request: NextRequest) {
+  const { error } = await requireAuth()
+  if (error) return error
+
+  const ip = getClientIp(request)
+  if (!checkRateLimit(`discover:${ip}`, 20, 60_000)) {
+    return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const section = searchParams.get("section");

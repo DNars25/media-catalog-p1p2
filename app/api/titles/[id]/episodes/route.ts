@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { requireAdmin, requireAuth } from '@/lib/rbac'
-import { EpisodesUpdateSchema } from '@/lib/validators'
+import { requireAdmin } from '@/lib/rbac'
+import { EpisodesUpdateSchema, EpisodeDeleteSchema } from '@/lib/validators'
 
 // PATCH: add-only (sem apagar existentes)
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { error } = await requireAdmin()
   if (error) return error
 
   try {
@@ -63,12 +63,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (!title) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const body = await req.json()
-    const season = typeof body.season === 'number' ? body.season : null
-    const episode = typeof body.episode === 'number' ? body.episode : null
+    const parsed = EpisodeDeleteSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-    if (season === null) {
-      return NextResponse.json({ error: 'season is required' }, { status: 400 })
-    }
+    const { season, episode = null } = parsed.data
 
     if (episode !== null) {
       await prisma.titleEpisode.deleteMany({
@@ -104,7 +102,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
 // PUT: substitui tudo (usado ao cadastrar/editar título)
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { error } = await requireAdmin()
   if (error) return error
 
   try {

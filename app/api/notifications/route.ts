@@ -7,8 +7,12 @@ export async function GET(req: NextRequest) {
   if (error) return error
 
   try {
-    const since = req.nextUrl.searchParams.get('since')
-    const where = since ? { createdAt: { gt: new Date(since) } } : {}
+    const sinceParam = req.nextUrl.searchParams.get('since')
+    const sinceDate = sinceParam ? new Date(sinceParam) : null
+    if (sinceDate && isNaN(sinceDate.getTime())) {
+      return NextResponse.json({ error: 'Parâmetro since inválido' }, { status: 400 })
+    }
+    const where = sinceDate ? { createdAt: { gt: sinceDate } } : {}
 
     const notifications = await prisma.notification.findMany({
       where,

@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
 import { Prisma, RequestStatus } from '@prisma/client'
+import { z } from 'zod'
+
+const StatusFilterSchema = z.enum([
+  '', 'PEDIDOS', 'EM_ANDAMENTO', 'INCOMPLETAS',
+  'SOLICITADO_VITRINE', 'ATUALIZADO_RECENTEMENTE', 'CONCLUIDAS',
+])
 
 // Séries FINALIZADA com episódios faltando E sem pedido isUpdate CONCLUIDO
 async function getIncompleteIds(): Promise<string[]> {
@@ -33,7 +39,12 @@ export async function GET(req: NextRequest) {
   try {
   const sp = req.nextUrl.searchParams
   const search = sp.get('search') || ''
-  const statusFilter = sp.get('status') || ''
+  const statusRaw = sp.get('status') || ''
+  const statusParsed = StatusFilterSchema.safeParse(statusRaw)
+  if (!statusParsed.success) {
+    return NextResponse.json({ error: 'Filtro de status inválido' }, { status: 400 })
+  }
+  const statusFilter = statusParsed.data
   const page = Math.max(1, parseInt(sp.get('page') || '1'))
   const limit = Math.min(50, parseInt(sp.get('limit') || '20'))
   const skip = (page - 1) * limit

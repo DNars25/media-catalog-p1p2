@@ -27,6 +27,11 @@ export const EpisodesUpdateSchema = z.object({
   episodesData: z.array(EpisodeItemSchema),
 })
 
+export const EpisodeDeleteSchema = z.object({
+  season: z.number().int().min(1),
+  episode: z.number().int().min(1).optional(),
+})
+
 export const TitleUpdateSchema = TitleCreateSchema.partial()
 
 export const RequestCreateSchema = z.object({

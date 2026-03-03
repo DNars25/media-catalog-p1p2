@@ -1,9 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { findTitleIdsByTextAndType } from '@/lib/search'
 import { searchTMDB, TmdbSearchResult } from '@/lib/tmdb'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  if (!checkRateLimit(`vitrine:${ip}`, 30, 60_000)) {
+    return NextResponse.json({ local: [], tmdb: [] }, { status: 429 })
+  }
+
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('q') || ''
   const type = searchParams.get('type') || 'MOVIE'

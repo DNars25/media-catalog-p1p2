@@ -7,6 +7,7 @@ import { sendPublicRequestCreated } from '@/lib/email'
 import { createNotification } from '@/lib/notifications'
 import { CorrecoesCreateSchema } from '@/lib/validators'
 import { getSystemUserId } from '@/lib/system-user'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // GET — lista correções (requer autenticação)
 export async function GET(req: NextRequest) {
@@ -46,7 +47,12 @@ export async function GET(req: NextRequest) {
 }
 
 // POST — cria correção (público, via vitrine)
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const ip = getClientIp(req)
+  if (!checkRateLimit(`correcao:${ip}`, 5, 10 * 60_000)) {
+    return NextResponse.json({ error: 'Muitas solicitações. Tente novamente em 10 minutos.' }, { status: 429 })
+  }
+
   try {
     const body = await req.json()
     const parsed = CorrecoesCreateSchema.safeParse(body)

@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth } from "@/lib/rbac"
-import { z } from "zod"
 import { logAudit } from "@/lib/audit"
 import { sendRequestStatusChanged } from "@/lib/email"
 import { getTMDBDetails, TmdbTvDetails } from "@/lib/tmdb"
-const UpdateSchema = z.object({
-  status: z.enum(["ABERTO", "EM_ANDAMENTO", "EM_PROGRESSO", "CONCLUIDO", "REJEITADO"]).optional(),
-  notes: z.string().optional().nullable(),
-  linkedTitleId: z.string().optional().nullable(),
-  audioType: z.string().optional().nullable(),
-  seasonNumber: z.number().optional().nullable(),
-})
+import { RequestUpdateSchema } from "@/lib/validators"
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const { error, session } = await requireAuth()
   if (error) return error
@@ -21,7 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const isOwner = existing.createdById === session!.user.id
   if (!isAdmin && !isOwner) return NextResponse.json({ error: "Sem permissao" }, { status: 403 })
   const body = await req.json()
-  const parsed = UpdateSchema.safeParse(body)
+  const parsed = RequestUpdateSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   const isBeingConcluded = parsed.data.status === 'CONCLUIDO' && existing.status !== 'CONCLUIDO'
 
