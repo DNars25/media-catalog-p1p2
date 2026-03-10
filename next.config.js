@@ -13,6 +13,16 @@ const nextConfig = {
     ],
     unoptimized: true,
   },
+    async redirects() {
+    return [
+      {
+        source: '/',
+        has: [{ type: 'host', value: 'vitrine.vodstack.work' }],
+        destination: '/vitrine',
+        permanent: false,
+      },
+    ]
+  },
   async headers() {
     const csp = [
       "default-src 'self'",
