@@ -4,5 +4,5 @@ import { redirect } from 'next/navigation'
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions)
-  redirect(session ? '/dashboard' : '/vitrine')
+  redirect(session ? '/dashboard' : '/login')
 }
