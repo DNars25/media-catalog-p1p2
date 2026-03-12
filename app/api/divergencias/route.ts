@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     prisma.title.findMany({
       where: {
         type: 'TV',
-        p2Divergence: { not: Prisma.JsonNull }
+        NOT: { p2Divergence: Prisma.JsonNull }
       },
       orderBy: { updatedAt: 'desc' },
       skip,
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       }
     }),
     prisma.title.count({
-      where: { type: 'TV', p2Divergence: { not: Prisma.JsonNull } }
+      where: { type: 'TV', NOT: { p2Divergence: Prisma.JsonNull } }
     })
   ]);
 
