@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit;
 
   const [titles, total] = await Promise.all([
-    db.title.findMany({
+    prisma.title.findMany({
       where: {
         type: 'TV',
         p2Divergence: { not: null }
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         updatedAt: true,
       }
     }),
-    db.title.count({
+    prisma.title.count({
       where: { type: 'TV', p2Divergence: { not: null } }
     })
   ]);
@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest) {
   const { id, tvSeasons, tvEpisodes } = await req.json();
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
 
-  const updated = await db.title.update({
+  const updated = await prisma.title.update({
     where: { id },
     data: {
       p2Divergence: null,
