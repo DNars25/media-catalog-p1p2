@@ -331,8 +331,8 @@ async function main() {
   console.log(`Séries já no banco: ${existingTvMap.size.toLocaleString()}`)
 
   // Estima chamadas TMDB restantes
-  const movieSearchesLeft = [...movies.keys()].filter((k) => !(k in cache.movies)).length
-  const seriesSearchesLeft = [...series.keys()].filter((k) => !(k in cache.series)).length
+  const movieSearchesLeft = Array.from(movies.keys()).filter((k) => !(k in cache.movies)).length
+  const seriesSearchesLeft = Array.from(series.keys()).filter((k) => !(k in cache.series)).length
   const totalApiCalls = movieSearchesLeft + seriesSearchesLeft * 2
   const etaSec = (totalApiCalls * RATE_MS) / 1000
   console.log(`\nChamadas TMDB pendentes: ~${totalApiCalls.toLocaleString()} (~${fmtTime(etaSec)} estimado)`)
