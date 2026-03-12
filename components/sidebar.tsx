@@ -16,7 +16,7 @@ const navItems = [
   { href: '/dashboard/atualizacoes', icon: RefreshCw, label: 'Atualizações' },
   { href: '/dashboard/correcoes', icon: AlertTriangle, label: 'Correções' },
   { href: '/dashboard/divergencias-p2', icon: AlertTriangle, label: 'Divergências P2' },
-  { href: '/dashboard/divergencias-exclusivos', icon: Server, label: 'Exclusivos por Servidor', sub: true },
+  { href: '/dashboard/divergencias-exclusivos', icon: Server, label: 'Mapeamento de Servidores', sub: true },
   { href: '/dashboard/tmdb', icon: Database, label: 'TMDB · Capa+Data' },
 ]
 const adminItems = [
