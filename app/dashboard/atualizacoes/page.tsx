@@ -30,6 +30,7 @@ interface SerieCard {
   tvStatus: string | null
   tmdbId: number
   savedEpisodeCount: number
+  pendingUpdateCount: number
   latestRequest: LatestRequest | null
 }
 
@@ -936,6 +937,9 @@ function SerieModal({
               </div>
             )}
 
+            <span className={'inline-block mt-2 mr-1 text-xs font-medium px-2 py-0.5 rounded-full ' + (serie.pendingUpdateCount > 0 ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-500')}>
+              {serie.pendingUpdateCount === 0 ? '0 solicitações' : `${serie.pendingUpdateCount} solicitaç${serie.pendingUpdateCount === 1 ? 'ão' : 'ões'}`}
+            </span>
             {serie.latestRequest ? (
               <>
                 <span className={'inline-block mt-2 text-white text-xs font-medium px-3 py-1 rounded-full ' + (reqStatusColor[serie.latestRequest.status] || 'bg-zinc-700')}>
@@ -1325,9 +1329,14 @@ export default function AtualizacoesPage() {
                     </div>
                   )}
                 </div>
-                <span className={'text-white text-xs font-medium px-3 py-1 rounded-full flex-shrink-0 ' + (s.latestRequest ? reqStatusColor[s.latestRequest.status] || 'bg-zinc-700' : 'bg-zinc-800 text-zinc-400')}>
-                  {s.latestRequest ? reqStatusLabel[s.latestRequest.status] || s.latestRequest.status : 'Sem pedido'}
-                </span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className={'text-xs font-medium px-2 py-0.5 rounded-full ' + (s.pendingUpdateCount > 0 ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-800 text-zinc-500')}>
+                    {s.pendingUpdateCount === 0 ? '0 sol.' : `${s.pendingUpdateCount} sol.`}
+                  </span>
+                  <span className={'text-white text-xs font-medium px-3 py-1 rounded-full ' + (s.latestRequest ? reqStatusColor[s.latestRequest.status] || 'bg-zinc-700' : 'bg-zinc-800 text-zinc-400')}>
+                    {s.latestRequest ? reqStatusLabel[s.latestRequest.status] || s.latestRequest.status : 'Sem pedido'}
+                  </span>
+                </div>
               </div>
             )
           })}

@@ -206,7 +206,7 @@ function CorrectForm({
 // ── TV Request Panel ──
 function TvRequestPanel({
   onCancel, onConfirm, tvMode, setTvMode, tvSubSeasons, setTvSubSeasons,
-  tvSubEpisodes, setTvSubEpisodes, panelLoading, buildTvNote,
+  tvSubEpisodes, setTvSubEpisodes, panelLoading, buildTvNote, isLocal,
 }: {
   onCancel: () => void
   onConfirm: () => void
@@ -218,12 +218,14 @@ function TvRequestPanel({
   setTvSubEpisodes: (v: string) => void
   panelLoading: boolean
   buildTvNote: (mode: 'new' | 'update' | 'substitution', s: string, e: string) => string
+  isLocal?: boolean
 }) {
-  const options: { value: 'new' | 'update' | 'substitution'; label: string; icon: string }[] = [
+  const allOptions: { value: 'new' | 'update' | 'substitution'; label: string; icon: string }[] = [
     { value: 'new', label: 'Novo título', icon: '🆕' },
     { value: 'update', label: 'Atualização de episódios/temporadas', icon: '🔄' },
     { value: 'substitution', label: 'Substituição de áudio (Dub↔Leg)', icon: '🎙️' },
   ]
+  const options = isLocal ? allOptions.filter(o => o.value !== 'new') : allOptions
 
   const note = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
 
@@ -541,7 +543,7 @@ export default function VitrinePage() {
                                   if (item.type === 'TV') {
                                     setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.posterUrl })
                                     setAltAudioPanel(null)
-                                    setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes('')
+                                    setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes('')
                                   } else {
                                     setAltAudioPanel(showAltPanel ? null : item.id)
                                     setTvPanel(null)
@@ -581,7 +583,7 @@ export default function VitrinePage() {
                           )}
 
                           {/* Painel TV — local */}
-                          {showTvPanel && <TvRequestPanel onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} />}
+                          {showTvPanel && <TvRequestPanel isLocal onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} />}
                         </div>
                       )
                     })}
@@ -627,7 +629,7 @@ export default function VitrinePage() {
                                     </button>
                               }
                             </div>
-                            {showTvPanel && <TvRequestPanel onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} />}
+                            {showTvPanel && <TvRequestPanel onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} isLocal={false} />}
                           </div>
                         )
                       })}

@@ -124,7 +124,9 @@ export async function GET(req: NextRequest) {
       where,
       skip,
       take: limit,
-      orderBy: { title: 'asc' },
+      orderBy: statusFilter === 'EM_ANDAMENTO'
+        ? [{ requests: { _count: 'desc' } }, { title: 'asc' }]
+        : { title: 'asc' },
       select: {
         id: true,
         title: true,
@@ -133,7 +135,14 @@ export async function GET(req: NextRequest) {
         tvEpisodes: true,
         tvStatus: true,
         tmdbId: true,
-        _count: { select: { episodes: true } },
+        _count: {
+          select: {
+            episodes: true,
+            requests: {
+              where: { isUpdate: true, status: { not: 'CONCLUIDO' as RequestStatus } },
+            },
+          },
+        },
         requests: {
           where: { isUpdate: true },
           orderBy: { createdAt: 'desc' },
@@ -157,6 +166,7 @@ export async function GET(req: NextRequest) {
   const series = titles.map(({ requests, _count, ...t }) => ({
     ...t,
     savedEpisodeCount: _count.episodes,
+    pendingUpdateCount: _count.requests,
     latestRequest: requests[0] ?? null,
   }))
 
