@@ -397,6 +397,12 @@ export default function RequestsPage() {
   const [tmdbSearching, setTmdbSearching] = useState(false)
   const [tmdbSelected, setTmdbSelected] = useState<TMDBResult | null>(null)
   const searchTimeout = useRef<NodeJS.Timeout>()
+  const [libraryTitle, setLibraryTitle] = useState<{ hasP1: boolean; hasP2: boolean; audioType: string | null } | null>(null)
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [audioRequest, setAudioRequest] = useState(false)
+  const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
+  const [substitutionSeasons, setSubstitutionSeasons] = useState('')
+  const [substitutionEpisodes, setSubstitutionEpisodes] = useState('')
 
   const handleTmdbSearch = (value: string) => {
     setTmdbQuery(value)
@@ -416,7 +422,36 @@ export default function RequestsPage() {
     setTmdbSelected(r)
     setTmdbResults([])
     setTmdbQuery(r.title)
-    setForm((f) => ({ ...f, requestedTitle: r.title, type: r.type === 'MOVIE' ? 'MOVIE' : 'TV', tmdbId: r.tmdbId, posterUrl: r.posterUrl, overview: r.overview, releaseYear: r.releaseYear }))
+    setForm((f) => ({ ...f, requestedTitle: r.title, type: r.type === 'MOVIE' ? 'MOVIE' : 'TV', tmdbId: r.tmdbId, posterUrl: r.posterUrl, overview: r.overview, releaseYear: r.releaseYear, notes: '' }))
+    setAudioRequest(false)
+    setTvMode('new')
+    setSubstitutionSeasons('')
+    setSubstitutionEpisodes('')
+    setLibraryTitle(null)
+  }
+
+  useEffect(() => {
+    if (!tmdbSelected) {
+      setLibraryTitle(null); setAudioRequest(false)
+      setTvMode('new'); setSubstitutionSeasons(''); setSubstitutionEpisodes('')
+      return
+    }
+    const titleType = tmdbSelected.type === 'MOVIE' ? 'MOVIE' : 'TV'
+    setLibraryLoading(true)
+    fetch(`/api/titles?tmdbId=${tmdbSelected.tmdbId}&type=${titleType}&limit=1`)
+      .then(r => r.json())
+      .then(data => {
+        const found = data.titles?.[0] ?? null
+        setLibraryTitle(found ? { hasP1: found.hasP1, hasP2: found.hasP2, audioType: found.audioType } : null)
+      })
+      .catch(() => setLibraryTitle(null))
+      .finally(() => setLibraryLoading(false))
+  }, [tmdbSelected])
+
+  function buildSubstitutionNote(seasons: string, episodes: string): string {
+    const parts = [seasons.trim(), episodes.trim()].filter(Boolean)
+    if (!parts.length) return 'Solicitação de substituição de áudio.'
+    return `Solicitação de substituição de áudio — ${parts.join(', ')}.`
   }
 
   const fetch_ = useCallback(async () => {
@@ -452,6 +487,7 @@ export default function RequestsPage() {
         notes: form.notes || null, preferredSystem: form.preferredSystem || null,
         tmdbId: form.tmdbId || null, posterUrl: form.posterUrl || null,
         priority: form.priority,
+        ...(form.type === 'TV' && tvMode === 'update' ? { isUpdate: true } : {}),
       }),
     })
     setFormLoading(false)
@@ -504,6 +540,7 @@ export default function RequestsPage() {
     setShowForm(false)
     setForm({ requestedTitle: '', type: 'MOVIE', notes: '', preferredSystem: '', tmdbId: null, posterUrl: null, overview: null, releaseYear: null, priority: false })
     setTmdbQuery(''); setTmdbSelected(null); setTmdbResults([])
+    setLibraryTitle(null); setAudioRequest(false); setTvMode('new'); setSubstitutionSeasons(''); setSubstitutionEpisodes('')
   }
 
   return (
@@ -717,6 +754,111 @@ export default function RequestsPage() {
                     <p className="text-xs text-muted-foreground mb-1">{tmdbSelected.type === 'MOVIE' ? 'Filme' : 'Série'} • {tmdbSelected.releaseYear || '?'}</p>
                     {tmdbSelected.overview && <p className="text-xs text-muted-foreground line-clamp-3">{tmdbSelected.overview}</p>}
                   </div>
+                </div>
+              )}
+
+              {/* ── Info de catálogo para Filmes ── */}
+              {tmdbSelected && form.type === 'MOVIE' && (
+                libraryLoading ? (
+                  <p className="text-xs text-muted-foreground">Verificando catálogo...</p>
+                ) : libraryTitle ? (
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 space-y-2">
+                    <p className="text-xs font-semibold text-blue-300 uppercase tracking-wide">Já no catálogo</p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground">Disponível em:</span>
+                      {libraryTitle.hasP1 && <span className="px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-medium">B2P</span>}
+                      {libraryTitle.hasP2 && <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">P2B</span>}
+                      {libraryTitle.audioType === 'DUBLADO' && <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-medium">Dub</span>}
+                      {libraryTitle.audioType === 'LEGENDADO' && <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-medium">Leg</span>}
+                      {libraryTitle.audioType === 'DUBLADO_LEGENDADO' && <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-medium">Dub+Leg</span>}
+                    </div>
+                    {libraryTitle.audioType === 'DUBLADO_LEGENDADO' ? (
+                      <p className="text-xs text-green-400 font-medium">Já disponível em Dub+Leg</p>
+                    ) : (
+                      <label className="flex items-center gap-2 cursor-pointer mt-1">
+                        <input
+                          type="checkbox"
+                          checked={audioRequest}
+                          onChange={e => {
+                            const checked = e.target.checked
+                            setAudioRequest(checked)
+                            if (checked) {
+                              const version = libraryTitle.audioType === 'DUBLADO' ? 'LEGENDADA' : 'DUBLADA'
+                              setForm(f => ({ ...f, notes: `Solicitação de versão ${version} do título já existente no catálogo.` }))
+                            } else {
+                              setForm(f => ({ ...f, notes: '' }))
+                            }
+                          }}
+                          className="rounded border-border"
+                        />
+                        <span className="text-sm">
+                          {libraryTitle.audioType === 'DUBLADO' ? 'Solicitar versão Legendada' : 'Solicitar versão Dublada'}
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                ) : null
+              )}
+
+              {/* ── Modo de pedido para Séries ── */}
+              {tmdbSelected && form.type === 'TV' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground block">Tipo de pedido</label>
+                  <div className="space-y-2">
+                    {([
+                      { value: 'new', label: 'Novo título', desc: 'Série ainda não existe no catálogo' },
+                      { value: 'update', label: 'Atualização', desc: 'Novos episódios ou temporadas disponíveis' },
+                      { value: 'substitution', label: 'Substituição Dub→Leg ou Leg→Dub', desc: 'Adicionar áudio alternativo em temporadas específicas' },
+                    ] as { value: 'new' | 'update' | 'substitution'; label: string; desc: string }[]).map(opt => (
+                      <label key={opt.value} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${tvMode === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:bg-secondary/50'}`}>
+                        <input
+                          type="radio"
+                          name="tvMode"
+                          value={opt.value}
+                          checked={tvMode === opt.value}
+                          onChange={() => {
+                            setTvMode(opt.value)
+                            setSubstitutionSeasons('')
+                            setSubstitutionEpisodes('')
+                            setForm(f => ({ ...f, notes: '' }))
+                          }}
+                          className="mt-0.5"
+                        />
+                        <div>
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  {tvMode === 'substitution' && (
+                    <div className="grid grid-cols-2 gap-3 mt-1">
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Temporada(s)</label>
+                        <input
+                          value={substitutionSeasons}
+                          onChange={e => {
+                            setSubstitutionSeasons(e.target.value)
+                            setForm(f => ({ ...f, notes: buildSubstitutionNote(e.target.value, substitutionEpisodes) }))
+                          }}
+                          placeholder="Ex: Temporada 2"
+                          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Episódio(s)</label>
+                        <input
+                          value={substitutionEpisodes}
+                          onChange={e => {
+                            setSubstitutionEpisodes(e.target.value)
+                            setForm(f => ({ ...f, notes: buildSubstitutionNote(substitutionSeasons, e.target.value) }))
+                          }}
+                          placeholder="Ex: Episódios 1 ao 10"
+                          className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               <div>
