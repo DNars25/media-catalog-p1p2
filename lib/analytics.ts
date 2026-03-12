@@ -3,29 +3,6 @@ import { Prisma, TitleType } from '@prisma/client'
 
 export type Period = '7d' | '30d' | '90d' | '6m' | '1y' | 'all'
 
-function getSince(period: Period): Date | undefined {
-  if (period === 'all') return undefined
-  const d = new Date()
-  if (period === '7d') d.setDate(d.getDate() - 7)
-  else if (period === '30d') d.setDate(d.getDate() - 30)
-  else if (period === '90d') d.setDate(d.getDate() - 90)
-  else if (period === '6m') d.setMonth(d.getMonth() - 6)
-  else if (period === '1y') d.setFullYear(d.getFullYear() - 1)
-  return d
-}
-
-function getPreviousRange(period: Period): { since: Date; until: Date } | null {
-  if (period === 'all') return null
-  const until = getSince(period)!
-  const since = new Date(until)
-  if (period === '7d') since.setDate(since.getDate() - 7)
-  else if (period === '30d') since.setDate(since.getDate() - 30)
-  else if (period === '90d') since.setDate(since.getDate() - 90)
-  else if (period === '6m') since.setMonth(since.getMonth() - 6)
-  else if (period === '1y') since.setFullYear(since.getFullYear() - 1)
-  return { since, until }
-}
-
 export interface UserStat {
   userId: string
   userName: string
@@ -57,7 +34,6 @@ export interface AnalyticsTotals {
 }
 
 export interface AnalyticsData {
-  period: Period
   totals: AnalyticsTotals
   previousTotals?: AnalyticsTotals
   byUser: UserStat[]
@@ -78,20 +54,19 @@ type RawMonthTitleRow = {
 }
 
 export async function getAnalyticsData(
-  period: Period,
+  startDate: Date,
+  endDate: Date,
   userId?: string,
   mediaType?: string
 ): Promise<AnalyticsData> {
-  const since = getSince(period)
-
   const requestFilter: Prisma.RequestWhereInput = {
-    ...(since ? { createdAt: { gte: since } } : {}),
+    createdAt: { gte: startDate, lte: endDate },
     ...(userId ? { createdById: userId } : {}),
     ...(mediaType ? { type: mediaType as TitleType } : {}),
   }
 
   const titleFilter: Prisma.TitleWhereInput = {
-    ...(since ? { createdAt: { gte: since } } : {}),
+    createdAt: { gte: startDate, lte: endDate },
     ...(userId ? { createdById: userId } : {}),
     ...(mediaType ? { type: mediaType as TitleType } : {}),
   }
@@ -160,17 +135,18 @@ export async function getAnalyticsData(
     titles: byUser.reduce((acc, u) => acc + u.titles, 0),
   }
 
-  // Previous period for variation cards
+  // Previous period (same duration, shifted back)
   let previousTotals: AnalyticsTotals | undefined
-  const prevRange = getPreviousRange(period)
-  if (prevRange) {
+  const duration = endDate.getTime() - startDate.getTime()
+  if (duration > 0) {
+    const prevStart = new Date(startDate.getTime() - duration)
     const prevRequestFilter: Prisma.RequestWhereInput = {
-      createdAt: { gte: prevRange.since, lt: prevRange.until },
+      createdAt: { gte: prevStart, lt: startDate },
       ...(userId ? { createdById: userId } : {}),
       ...(mediaType ? { type: mediaType as TitleType } : {}),
     }
     const prevTitleFilter: Prisma.TitleWhereInput = {
-      createdAt: { gte: prevRange.since, lt: prevRange.until },
+      createdAt: { gte: prevStart, lt: startDate },
       ...(userId ? { createdById: userId } : {}),
       ...(mediaType ? { type: mediaType as TitleType } : {}),
     }
@@ -204,14 +180,12 @@ export async function getAnalyticsData(
     previousTotals = prev
   }
 
-  // Monthly chart data — capped at 24 months
-  const chartSince = since ?? new Date(new Date().setMonth(new Date().getMonth() - 23))
-
-  const reqWhere = [Prisma.sql`"createdAt" >= ${chartSince}`]
+  // Monthly chart data
+  const reqWhere = [Prisma.sql`"createdAt" >= ${startDate} AND "createdAt" <= ${endDate}`]
   if (userId) reqWhere.push(Prisma.sql`"createdById" = ${userId}`)
   if (mediaType) reqWhere.push(Prisma.sql`"type" = ${mediaType}::"TitleType"`)
 
-  const titleWhere = [Prisma.sql`"createdAt" >= ${chartSince}`]
+  const titleWhere = [Prisma.sql`"createdAt" >= ${startDate} AND "createdAt" <= ${endDate}`]
   if (userId) titleWhere.push(Prisma.sql`"createdById" = ${userId}`)
   if (mediaType) titleWhere.push(Prisma.sql`"type" = ${mediaType}::"TitleType"`)
 
@@ -265,5 +239,5 @@ export async function getAnalyticsData(
 
   const allUsers = users.map(u => ({ userId: u.id, userName: u.name }))
 
-  return { period, totals, previousTotals, byUser, allUsers, monthly }
+  return { totals, previousTotals, byUser, allUsers, monthly }
 }

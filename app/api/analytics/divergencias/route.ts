@@ -2,18 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import type { Period } from '@/lib/analytics';
-
-function getSince(period: Period): Date | undefined {
-  if (period === 'all') return undefined;
-  const d = new Date();
-  if (period === '7d') d.setDate(d.getDate() - 7);
-  else if (period === '30d') d.setDate(d.getDate() - 30);
-  else if (period === '90d') d.setDate(d.getDate() - 90);
-  else if (period === '6m') d.setMonth(d.getMonth() - 6);
-  else if (period === '1y') d.setFullYear(d.getFullYear() - 1);
-  return d;
-}
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -21,9 +9,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const period = (new URL(req.url).searchParams.get('period') ?? '30d') as Period;
-  const since = getSince(period);
-  const dateFilter = since ? { createdAt: { gte: since } } : {};
+  const sp = new URL(req.url).searchParams;
+  const startParam = sp.get('startDate');
+  const endParam = sp.get('endDate');
+
+  let dateFilter: { createdAt?: { gte?: Date; lte?: Date } } = {};
+
+  if (startParam && endParam) {
+    const startDate = new Date(startParam);
+    const endDate = new Date(endParam);
+    endDate.setHours(23, 59, 59, 999);
+    if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+      dateFilter = { createdAt: { gte: startDate, lte: endDate } };
+    }
+  } else {
+    // Default: last 30 days
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    dateFilter = { createdAt: { gte: since } };
+  }
 
   const [resolverDivergencia, resolverMapeamento, auditGroups] = await Promise.all([
     prisma.auditLog.count({

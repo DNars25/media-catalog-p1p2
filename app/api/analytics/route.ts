@@ -1,23 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/rbac'
-import { getAnalyticsData, Period } from '@/lib/analytics'
+import { getAnalyticsData } from '@/lib/analytics'
 
-const VALID_PERIODS: Period[] = ['7d', '30d', '90d', '6m', '1y', 'all']
+function defaultRange(): { startDate: Date; endDate: Date } {
+  const endDate = new Date()
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - 30)
+  return { startDate, endDate }
+}
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
 
-  const period = (req.nextUrl.searchParams.get('period') || '30d') as Period
-  if (!VALID_PERIODS.includes(period)) {
-    return NextResponse.json({ error: 'Invalid period' }, { status: 400 })
+  const sp = req.nextUrl.searchParams
+  const startParam = sp.get('startDate')
+  const endParam = sp.get('endDate')
+  const userId = sp.get('userId') || undefined
+  const mediaType = sp.get('mediaType') || undefined
+
+  let startDate: Date
+  let endDate: Date
+
+  if (startParam && endParam) {
+    startDate = new Date(startParam)
+    endDate = new Date(endParam)
+    endDate.setHours(23, 59, 59, 999)
+  } else {
+    const def = defaultRange()
+    startDate = def.startDate
+    endDate = def.endDate
   }
 
-  const userId = req.nextUrl.searchParams.get('userId') || undefined
-  const mediaType = req.nextUrl.searchParams.get('mediaType') || undefined
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return NextResponse.json({ error: 'Invalid date range' }, { status: 400 })
+  }
 
   try {
-    const data = await getAnalyticsData(period, userId, mediaType)
+    const data = await getAnalyticsData(startDate, endDate, userId, mediaType)
     return NextResponse.json(data)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/rbac'
-import { getAnalyticsData, Period } from '@/lib/analytics'
+import { getAnalyticsData } from '@/lib/analytics'
 import * as XLSX from 'xlsx'
-
-const VALID_PERIODS: Period[] = ['7d', '30d', '90d', '6m', '1y', 'all']
 
 function pct(done: number, total: number) {
   if (!total) return '0%'
@@ -14,22 +12,33 @@ export async function GET(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
 
-  const period = (req.nextUrl.searchParams.get('period') || '30d') as Period
-  if (!VALID_PERIODS.includes(period)) {
-    return NextResponse.json({ error: 'Invalid period' }, { status: 400 })
+  const sp = req.nextUrl.searchParams
+  const startParam = sp.get('startDate')
+  const endParam = sp.get('endDate')
+  const format = sp.get('format') || 'csv'
+  const userId = sp.get('userId') || undefined
+  const mediaType = sp.get('mediaType') || undefined
+
+  let startDate: Date
+  let endDate: Date
+
+  if (startParam && endParam) {
+    startDate = new Date(startParam)
+    endDate = new Date(endParam)
+    endDate.setHours(23, 59, 59, 999)
+  } else {
+    endDate = new Date()
+    startDate = new Date()
+    startDate.setDate(startDate.getDate() - 30)
   }
 
-  const format = req.nextUrl.searchParams.get('format') || 'csv'
-  const userId = req.nextUrl.searchParams.get('userId') || undefined
-  const mediaType = req.nextUrl.searchParams.get('mediaType') || undefined
-
-  const { byUser, monthly, totals } = await getAnalyticsData(period, userId, mediaType)
+  const { byUser, monthly, totals } = await getAnalyticsData(startDate, endDate, userId, mediaType)
   const date = new Date().toISOString().slice(0, 10)
+  const rangeLabel = `${startDate.toISOString().slice(0, 10)}_${endDate.toISOString().slice(0, 10)}`
 
   if (format === 'xlsx') {
     const wb = XLSX.utils.book_new()
 
-    // Sheet 1: Por Usuário
     const userHeader = [
       'Usuário', 'Pedidos', 'Pedidos Atendidos', '% Atendidos',
       'Correções', 'Correções Resolvidas', '% Resolvidas',
@@ -44,12 +53,10 @@ export async function GET(req: NextRequest) {
     ])
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([userHeader, ...userRows]), 'Por Usuário')
 
-    // Sheet 2: Evolução Mensal
     const monthHeader = ['Mês', 'Pedidos', 'Correções', 'Atualizações', 'Títulos']
     const monthRows = monthly.map(m => [m.month, m.requests, m.corrections, m.updates, m.titles])
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([monthHeader, ...monthRows]), 'Mensal')
 
-    // Sheet 3: Totais
     const totaisRows = [
       ['Métrica', 'Total', 'Concluídos', '% Conclusão'],
       ['Pedidos', totals.requests, totals.requestsDone, pct(totals.requestsDone, totals.requests)],
@@ -63,7 +70,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(buf, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="analytics-${period}-${date}.xlsx"`,
+        'Content-Disposition': `attachment; filename="analytics-${rangeLabel}-${date}.xlsx"`,
       },
     })
   }
@@ -88,7 +95,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="analytics-${period}-${date}.csv"`,
+      'Content-Disposition': `attachment; filename="analytics-${rangeLabel}-${date}.csv"`,
     },
   })
 }

@@ -3,23 +3,25 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { BarChart2, Download, Loader2, TrendingUp, AlertTriangle, RefreshCw, Film, FileSpreadsheet, Printer } from 'lucide-react'
-import type { AnalyticsData, Period } from '@/lib/analytics'
+import type { AnalyticsData } from '@/lib/analytics'
 import { UserBarChart, MonthlyLineChart } from './analytics-charts'
-
-const PERIODS: { value: Period; label: string }[] = [
-  { value: '7d', label: '7 dias' },
-  { value: '30d', label: '30 dias' },
-  { value: '90d', label: '90 dias' },
-  { value: '6m', label: '6 meses' },
-  { value: '1y', label: '1 ano' },
-  { value: 'all', label: 'Tudo' },
-]
 
 const MEDIA_TYPES = [
   { value: '', label: 'Todos' },
   { value: 'MOVIE', label: 'Filmes' },
   { value: 'TV', label: 'Séries' },
 ]
+
+function toInputDate(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
+
+function defaultDates() {
+  const end = new Date()
+  const start = new Date()
+  start.setDate(start.getDate() - 30)
+  return { start: toInputDate(start), end: toInputDate(end) }
+}
 
 function pct(done: number, total: number) {
   if (!total) return '0'
@@ -63,7 +65,13 @@ export default function AnalyticsPage() {
   const router = useRouter()
   const isAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(session?.user?.role ?? '')
 
-  const [period, setPeriod] = useState<Period>('30d')
+  const { start: defaultStart, end: defaultEnd } = defaultDates()
+  const [startDate, setStartDate] = useState(defaultStart)
+  const [endDate, setEndDate] = useState(defaultEnd)
+  // Committed values (only update on Apply)
+  const [appliedStart, setAppliedStart] = useState(defaultStart)
+  const [appliedEnd, setAppliedEnd] = useState(defaultEnd)
+
   const [userId, setUserId] = useState('')
   const [mediaType, setMediaType] = useState('')
   const [data, setData] = useState<AnalyticsData | null>(null)
@@ -81,12 +89,13 @@ export default function AnalyticsPage() {
     if (!isAdmin) return
     setLoading(true)
     setErrorMsg(null)
-    const params = new URLSearchParams({ period })
+    const params = new URLSearchParams({ startDate: appliedStart, endDate: appliedEnd })
     if (userId) params.set('userId', userId)
     if (mediaType) params.set('mediaType', mediaType)
+    const divParams = new URLSearchParams({ startDate: appliedStart, endDate: appliedEnd })
     Promise.all([
       fetch('/api/analytics?' + params.toString()).then(r => r.json()),
-      fetch(`/api/analytics/divergencias?period=${period}`).then(r => r.json()),
+      fetch('/api/analytics/divergencias?' + divParams.toString()).then(r => r.json()),
     ])
       .then(([d, div]) => {
         if (d?.error) { setErrorMsg(d.error); setData(null) }
@@ -98,15 +107,32 @@ export default function AnalyticsPage() {
       })
       .catch(e => { setErrorMsg(String(e)); setData(null) })
       .finally(() => setLoading(false))
-  }, [period, userId, mediaType, isAdmin])
+  }, [appliedStart, appliedEnd, userId, mediaType, isAdmin])
 
   useEffect(() => {
     if (status === 'authenticated' && isAdmin) fetchData()
   }, [fetchData, status, isAdmin])
 
+  function applyRange() {
+    setAppliedStart(startDate)
+    setAppliedEnd(endDate)
+  }
+
+  function setQuickRange(days: number) {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - days)
+    const s = toInputDate(start)
+    const e = toInputDate(end)
+    setStartDate(s)
+    setEndDate(e)
+    setAppliedStart(s)
+    setAppliedEnd(e)
+  }
+
   function handleExport(format: 'csv' | 'xlsx') {
     setExporting(true)
-    const params = new URLSearchParams({ period, format })
+    const params = new URLSearchParams({ startDate: appliedStart, endDate: appliedEnd, format })
     if (userId) params.set('userId', userId)
     if (mediaType) params.set('mediaType', mediaType)
     const a = document.createElement('a')
@@ -169,62 +195,107 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Filters row */}
-        <div className='flex flex-wrap gap-2 items-center'>
-          {/* Period */}
-          <div className='flex gap-1 bg-muted rounded-lg p-1'>
-            {PERIODS.map(p => (
+        <div className='flex flex-wrap gap-3 items-end'>
+          {/* Date range */}
+          <div className='flex flex-col gap-1.5'>
+            <span className='text-xs text-muted-foreground font-medium'>Período</span>
+            <div className='flex items-center gap-2 flex-wrap'>
+              {/* Quick-fill shortcuts */}
+              <div className='flex gap-1 bg-muted rounded-lg p-1'>
+                {[
+                  { label: '7d', days: 7 },
+                  { label: '30d', days: 30 },
+                  { label: '90d', days: 90 },
+                  { label: '1a', days: 365 },
+                ].map(q => (
+                  <button
+                    key={q.days}
+                    onClick={() => setQuickRange(q.days)}
+                    className='px-3 py-1.5 rounded-md text-sm font-medium transition text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+              {/* Date inputs */}
+              <div className='flex items-center gap-2'>
+                <div className='flex flex-col gap-0.5'>
+                  <label className='text-xs text-muted-foreground'>Data inicial</label>
+                  <input
+                    type='date'
+                    value={startDate}
+                    max={endDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className='px-3 py-1.5 rounded-lg bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
+                  />
+                </div>
+                <span className='text-muted-foreground text-sm mt-4'>→</span>
+                <div className='flex flex-col gap-0.5'>
+                  <label className='text-xs text-muted-foreground'>Data final</label>
+                  <input
+                    type='date'
+                    value={endDate}
+                    min={startDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className='px-3 py-1.5 rounded-lg bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
+                  />
+                </div>
+              </div>
               <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                  period === p.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                onClick={applyRange}
+                disabled={loading}
+                className='mt-4 px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50'
               >
-                {p.label}
+                Aplicar
               </button>
-            ))}
+            </div>
           </div>
 
           {/* Media type */}
-          <div className='flex gap-1 bg-muted rounded-lg p-1'>
-            {MEDIA_TYPES.map(t => (
-              <button
-                key={t.value}
-                onClick={() => setMediaType(t.value)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                  mediaType === t.value
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className='flex flex-col gap-1.5'>
+            <span className='text-xs text-muted-foreground font-medium'>Tipo</span>
+            <div className='flex gap-1 bg-muted rounded-lg p-1'>
+              {MEDIA_TYPES.map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => setMediaType(t.value)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                    mediaType === t.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* User filter */}
           {allUsers.length > 0 && (
-            <select
-              value={userId}
-              onChange={e => setUserId(e.target.value)}
-              className='px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
-            >
-              <option value=''>Todos os usuários</option>
-              {allUsers.map(u => (
-                <option key={u.userId} value={u.userId}>{u.userName}</option>
-              ))}
-            </select>
+            <div className='flex flex-col gap-1.5'>
+              <span className='text-xs text-muted-foreground font-medium'>Usuário</span>
+              <select
+                value={userId}
+                onChange={e => setUserId(e.target.value)}
+                className='px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
+              >
+                <option value=''>Todos os usuários</option>
+                {allUsers.map(u => (
+                  <option key={u.userId} value={u.userId}>{u.userName}</option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
       </div>
 
       {/* Print header (only visible when printing) */}
       <div className='hidden print:block mb-4'>
-        <h1 className='text-xl font-bold'>Analytics — {PERIODS.find(p => p.value === period)?.label}</h1>
+        <h1 className='text-xl font-bold'>Analytics</h1>
         <p className='text-sm text-gray-500'>
-          {MEDIA_TYPES.find(t => t.value === mediaType)?.label}
+          {appliedStart} até {appliedEnd}
+          {mediaType ? ` · ${MEDIA_TYPES.find(t => t.value === mediaType)?.label}` : ''}
           {userId && allUsers.length > 0 ? ` · ${allUsers.find(u => u.userId === userId)?.userName}` : ''}
           {' · '}Gerado em {new Date().toLocaleDateString('pt-BR')}
         </p>
