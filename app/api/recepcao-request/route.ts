@@ -19,6 +19,21 @@ export async function POST(req: NextRequest) {
 
     const { title, type, posterUrl, tmdbId, notes, isUpdate, linkedTitleId } = parsed.data
 
+    // Prevent duplicate open requests
+    if (linkedTitleId) {
+      const existing = await prisma.request.findFirst({
+        where: { linkedTitleId, status: { not: 'CONCLUIDO' } },
+        select: { id: true },
+      })
+      if (existing) return NextResponse.json({ error: 'Já existe um pedido em aberto para este título.' }, { status: 409 })
+    } else if (tmdbId) {
+      const existing = await prisma.request.findFirst({
+        where: { tmdbId, type, source: 'VITRINE', status: { not: 'CONCLUIDO' } },
+        select: { id: true },
+      })
+      if (existing) return NextResponse.json({ error: 'Já existe um pedido em aberto para este título.' }, { status: 409 })
+    }
+
     const systemUserId = await getSystemUserId()
     if (!systemUserId) return NextResponse.json({ error: 'Serviço indisponível' }, { status: 503 })
 

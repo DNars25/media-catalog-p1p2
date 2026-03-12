@@ -308,6 +308,7 @@ export default function VitrinePage() {
   const [reported, setReported] = useState<number[]>([])
   const [correctingId, setCorrectingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
+  const [pendingItems, setPendingItems] = useState<number[]>([])
   const [altAudioPanel, setAltAudioPanel] = useState<string | null>(null)
   const [tvPanel, setTvPanel] = useState<{ tmdbId: number; title: string; posterUrl: string | null; localId?: string } | null>(null)
   const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
@@ -357,6 +358,10 @@ export default function VitrinePage() {
         setRequested(prev => [...prev, item.tmdbId])
         closePanels()
         setFeedback('Pedido enviado com sucesso!')
+      } else if (res.status === 409) {
+        setPendingItems(prev => [...prev, item.tmdbId])
+        closePanels()
+        setFeedback('Já existe um pedido em aberto para este título.')
       } else {
         setFeedback('Erro ao enviar pedido. Tente novamente.')
       }
@@ -384,6 +389,10 @@ export default function VitrinePage() {
         setRequested(prev => [...prev, tvPanel.tmdbId])
         closePanels()
         setFeedback('Pedido enviado com sucesso!')
+      } else if (res.status === 409) {
+        setPendingItems(prev => [...prev, tvPanel.tmdbId])
+        closePanels()
+        setFeedback('Já existe um pedido em aberto para este título.')
       } else {
         setFeedback('Erro ao enviar pedido. Tente novamente.')
       }
@@ -519,6 +528,7 @@ export default function VitrinePage() {
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Disponível no catálogo</p>
                     {results.local.map(item => {
                       const alreadyRequested = requested.includes(item.tmdbId)
+                      const alreadyPending = pendingItems.includes(item.tmdbId)
                       const showAltPanel = altAudioPanel === item.id
                       const showTvPanel = tvPanel?.tmdbId === item.tmdbId
                       const canRequestAlt = item.audioType !== 'DUBLADO_LEGENDADO'
@@ -538,7 +548,12 @@ export default function VitrinePage() {
                                 {item.audioType === 'DUBLADO_LEGENDADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#14532d40', color: '#4ade80' }}>Dub+Leg</span>}
                               </div>
                             </div>
-                            {!alreadyRequested && canRequestAlt && (
+                            {alreadyPending && !alreadyRequested && (
+                              <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#9ca3af' }}>
+                                <CheckCircle className="w-3 h-3" /> Já solicitado
+                              </span>
+                            )}
+                            {!alreadyRequested && !alreadyPending && canRequestAlt && (
                               <button
                                 onClick={() => {
                                   if (item.type === 'TV') {
