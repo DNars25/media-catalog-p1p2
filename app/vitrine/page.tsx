@@ -553,7 +553,13 @@ export default function VitrinePage() {
                                 className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 transition"
                                 style={{ backgroundColor: (showAltPanel || showTvPanel) ? '#252525' : '#f9731620', color: '#f97316', border: '1px solid #f9731640' }}
                               >
-                                {(showAltPanel || showTvPanel) ? 'Cancelar' : 'Versão alternativa'}
+                                {(showAltPanel || showTvPanel)
+                                  ? 'Cancelar'
+                                  : item.type === 'TV'
+                                    ? 'Solicitar atualização'
+                                    : item.audioType === 'DUBLADO'
+                                      ? 'Solicitar em Leg'
+                                      : 'Solicitar em Dub'}
                               </button>
                             )}
                             {alreadyRequested && (
