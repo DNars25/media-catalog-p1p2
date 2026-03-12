@@ -309,7 +309,7 @@ export default function VitrinePage() {
   const [correctingId, setCorrectingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
   const [altAudioPanel, setAltAudioPanel] = useState<string | null>(null)
-  const [tvPanel, setTvPanel] = useState<{ tmdbId: number; title: string; posterUrl: string | null } | null>(null)
+  const [tvPanel, setTvPanel] = useState<{ tmdbId: number; title: string; posterUrl: string | null; localId?: string } | null>(null)
   const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
   const [tvSubSeasons, setTvSubSeasons] = useState('')
   const [tvSubEpisodes, setTvSubEpisodes] = useState('')
@@ -377,6 +377,7 @@ export default function VitrinePage() {
           title: tvPanel.title, type: 'TV', posterUrl: tvPanel.posterUrl, tmdbId: tvPanel.tmdbId,
           notes: notes || null,
           isUpdate: tvMode === 'update',
+          linkedTitleId: tvPanel.localId ?? null,
         }),
       })
       if (res.ok) {
@@ -541,7 +542,7 @@ export default function VitrinePage() {
                               <button
                                 onClick={() => {
                                   if (item.type === 'TV') {
-                                    setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.posterUrl })
+                                    setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.posterUrl, localId: item.id })
                                     setAltAudioPanel(null)
                                     setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes('')
                                   } else {

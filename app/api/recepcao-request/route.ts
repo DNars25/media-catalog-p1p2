@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const parsed = RecepcaoRequestSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-    const { title, type, posterUrl, tmdbId, notes, isUpdate } = parsed.data
+    const { title, type, posterUrl, tmdbId, notes, isUpdate, linkedTitleId } = parsed.data
 
     const systemUserId = await getSystemUserId()
     if (!systemUserId) return NextResponse.json({ error: 'Serviço indisponível' }, { status: 503 })
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         posterUrl: posterUrl ?? null,
         tmdbId: tmdbId ?? null,
         notes: notes ?? null,
+        linkedTitleId: linkedTitleId ?? null,
         requestedBy: 'Vitrine',
         status: 'ABERTO',
         isUpdate: isUpdate ?? false,

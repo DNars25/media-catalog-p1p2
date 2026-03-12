@@ -92,6 +92,7 @@ export const RecepcaoRequestSchema = z.object({
   posterUrl: z.string().url().optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
   isUpdate: z.boolean().optional(),
+  linkedTitleId: z.string().uuid().optional().nullable(),
 })
 
 export const LimparConcluidosSchema = z.object({

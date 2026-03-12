@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
           select: {
             episodes: true,
             requests: {
-              where: { isUpdate: true, status: { not: 'CONCLUIDO' as RequestStatus } },
+              where: { isUpdate: true, source: 'VITRINE', status: { not: 'CONCLUIDO' as RequestStatus } },
             },
           },
         },
