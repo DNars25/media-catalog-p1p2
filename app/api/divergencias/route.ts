@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     prisma.title.findMany({
       where: {
         type: 'TV',
-        p2Divergence: { not: null }
+        p2Divergence: { not: Prisma.JsonNull }
       },
       orderBy: { updatedAt: 'desc' },
       skip,
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
       }
     }),
     prisma.title.count({
-      where: { type: 'TV', p2Divergence: { not: null } }
+      where: { type: 'TV', p2Divergence: { not: Prisma.JsonNull } }
     })
   ]);
 
