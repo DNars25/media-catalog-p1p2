@@ -15,6 +15,7 @@ interface LocalItem {
   posterUrl: string | null
   tmdbId: number
   type: string
+  audioType: string | null
 }
 interface TmdbItem {
   tmdbId: number
@@ -202,6 +203,98 @@ function CorrectForm({
   )
 }
 
+// ── TV Request Panel ──
+function TvRequestPanel({
+  onCancel, onConfirm, tvMode, setTvMode, tvSubSeasons, setTvSubSeasons,
+  tvSubEpisodes, setTvSubEpisodes, panelLoading, buildTvNote,
+}: {
+  onCancel: () => void
+  onConfirm: () => void
+  tvMode: 'new' | 'update' | 'substitution'
+  setTvMode: (m: 'new' | 'update' | 'substitution') => void
+  tvSubSeasons: string
+  setTvSubSeasons: (v: string) => void
+  tvSubEpisodes: string
+  setTvSubEpisodes: (v: string) => void
+  panelLoading: boolean
+  buildTvNote: (mode: 'new' | 'update' | 'substitution', s: string, e: string) => string
+}) {
+  const options: { value: 'new' | 'update' | 'substitution'; label: string; icon: string }[] = [
+    { value: 'new', label: 'Novo título', icon: '🆕' },
+    { value: 'update', label: 'Atualização de episódios/temporadas', icon: '🔄' },
+    { value: 'substitution', label: 'Substituição de áudio (Dub↔Leg)', icon: '🎙️' },
+  ]
+
+  const note = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+
+  return (
+    <div className="mt-1 rounded-xl p-4 space-y-3" style={{ backgroundColor: '#0f1a0f', border: '1px solid #1a3a1a' }}>
+      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>Tipo de pedido</p>
+      <div className="space-y-2">
+        {options.map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes('') }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl text-left text-sm font-medium text-white transition"
+            style={{
+              backgroundColor: tvMode === opt.value ? '#14532d40' : '#1a1a1a',
+              border: tvMode === opt.value ? '1px solid #166534' : '1px solid #2a2a2a',
+            }}
+          >
+            <span>{opt.icon}</span>
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {tvMode === 'substitution' && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Temporada(s)</p>
+            <input
+              value={tvSubSeasons}
+              onChange={e => setTvSubSeasons(e.target.value)}
+              placeholder="Ex: T2"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+            />
+          </div>
+          <div>
+            <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Episódio(s)</p>
+            <input
+              value={tvSubEpisodes}
+              onChange={e => setTvSubEpisodes(e.target.value)}
+              placeholder="Ex: Ep 1 ao 10"
+              className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+              style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {note && (
+        <p className="text-xs rounded-lg px-3 py-2" style={{ backgroundColor: '#1a1a2a', color: '#93c5fd' }}>
+          {note}
+        </p>
+      )}
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={onCancel} className="flex-1 py-2 rounded-lg text-sm transition" style={{ border: '1px solid #2a2a2a', color: '#9ca3af' }}>
+          Cancelar
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={panelLoading}
+          className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
+          style={{ backgroundColor: '#f97316' }}
+        >
+          {panelLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main page ──
 export default function VitrinePage() {
   const [mode, setMode] = useState<Mode>('pedido')
@@ -213,12 +306,87 @@ export default function VitrinePage() {
   const [reported, setReported] = useState<number[]>([])
   const [correctingId, setCorrectingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
+  const [altAudioPanel, setAltAudioPanel] = useState<string | null>(null)
+  const [tvPanel, setTvPanel] = useState<{ tmdbId: number; title: string; posterUrl: string | null } | null>(null)
+  const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
+  const [tvSubSeasons, setTvSubSeasons] = useState('')
+  const [tvSubEpisodes, setTvSubEpisodes] = useState('')
+  const [panelLoading, setPanelLoading] = useState(false)
+
+  function closePanels() {
+    setAltAudioPanel(null)
+    setTvPanel(null)
+    setTvMode('new')
+    setTvSubSeasons('')
+    setTvSubEpisodes('')
+  }
 
   function reset() {
     setResults(null)
     setQuery('')
     setFeedback('')
     setCorrectingId(null)
+    closePanels()
+  }
+
+  function buildTvNote(mode: 'new' | 'update' | 'substitution', seasons: string, episodes: string): string {
+    if (mode === 'update') return 'Solicitação de atualização de episódios/temporadas.'
+    if (mode === 'substitution') {
+      const parts = [seasons.trim(), episodes.trim()].filter(Boolean)
+      if (!parts.length) return 'Solicitação de substituição de áudio.'
+      return `Solicitação de substituição de áudio — ${parts.join(', ')}.`
+    }
+    return ''
+  }
+
+  async function sendAltAudio(item: LocalItem) {
+    setPanelLoading(true)
+    try {
+      const version = item.audioType === 'DUBLADO' ? 'LEGENDADA' : 'DUBLADA'
+      const res = await fetch('/api/recepcao-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: item.title, type, posterUrl: item.posterUrl, tmdbId: item.tmdbId,
+          notes: `Solicitação de versão ${version} — título já existente no catálogo.`,
+        }),
+      })
+      if (res.ok) {
+        setRequested(prev => [...prev, item.tmdbId])
+        closePanels()
+        setFeedback('Pedido enviado com sucesso!')
+      } else {
+        setFeedback('Erro ao enviar pedido. Tente novamente.')
+      }
+    } finally {
+      setPanelLoading(false)
+    }
+  }
+
+  async function sendTvRequest() {
+    if (!tvPanel) return
+    setPanelLoading(true)
+    try {
+      const notes = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+      const res = await fetch('/api/recepcao-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: tvPanel.title, type: 'TV', posterUrl: tvPanel.posterUrl, tmdbId: tvPanel.tmdbId,
+          notes: notes || null,
+          isUpdate: tvMode === 'update',
+        }),
+      })
+      if (res.ok) {
+        setRequested(prev => [...prev, tvPanel.tmdbId])
+        closePanels()
+        setFeedback('Pedido enviado com sucesso!')
+      } else {
+        setFeedback('Erro ao enviar pedido. Tente novamente.')
+      }
+    } finally {
+      setPanelLoading(false)
+    }
   }
 
   const handleModeChange = (m: Mode) => { setMode(m); reset() }
@@ -346,19 +514,77 @@ export default function VitrinePage() {
                 {results.local.length > 0 && (
                   <div>
                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Disponível no catálogo</p>
-                    {results.local.map(item => (
-                      <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl mb-2" style={{ backgroundColor: '#151515' }}>
-                        <PosterBox posterUrl={item.posterUrl} title={item.title} />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-white">{item.title}</p>
-                          <p className="text-xs text-gray-400">{item.year}</p>
-                          <div className="flex items-center gap-1 mt-1">
-                            <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-                            <span className="text-xs text-green-400">Disponível no {item.server}</span>
+                    {results.local.map(item => {
+                      const alreadyRequested = requested.includes(item.tmdbId)
+                      const showAltPanel = altAudioPanel === item.id
+                      const showTvPanel = tvPanel?.tmdbId === item.tmdbId
+                      const canRequestAlt = item.audioType !== 'DUBLADO_LEGENDADO'
+                      return (
+                        <div key={item.id} className="mb-2">
+                          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#151515' }}>
+                            <PosterBox posterUrl={item.posterUrl} title={item.title} />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-white">{item.title}</p>
+                              <p className="text-xs text-gray-400">{item.year}</p>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                                {item.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
+                                {item.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
+                                {item.audioType === 'DUBLADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Dub</span>}
+                                {item.audioType === 'LEGENDADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Leg</span>}
+                                {item.audioType === 'DUBLADO_LEGENDADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#14532d40', color: '#4ade80' }}>Dub+Leg</span>}
+                              </div>
+                            </div>
+                            {!alreadyRequested && canRequestAlt && (
+                              <button
+                                onClick={() => {
+                                  if (item.type === 'TV') {
+                                    setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.posterUrl })
+                                    setAltAudioPanel(null)
+                                    setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes('')
+                                  } else {
+                                    setAltAudioPanel(showAltPanel ? null : item.id)
+                                    setTvPanel(null)
+                                  }
+                                }}
+                                className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 transition"
+                                style={{ backgroundColor: (showAltPanel || showTvPanel) ? '#252525' : '#f9731620', color: '#f97316', border: '1px solid #f9731640' }}
+                              >
+                                {(showAltPanel || showTvPanel) ? 'Cancelar' : 'Versão alternativa'}
+                              </button>
+                            )}
+                            {alreadyRequested && (
+                              <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#60a5fa' }}>
+                                <CheckCircle className="w-3 h-3" /> Solicitado
+                              </span>
+                            )}
                           </div>
+
+                          {/* Painel áudio alternativo — Filmes */}
+                          {showAltPanel && item.type === 'MOVIE' && (
+                            <div className="mt-1 rounded-xl p-4 space-y-3" style={{ backgroundColor: '#0f0f1a', border: '1px solid #1a1a3a' }}>
+                              <p className="text-sm text-white font-medium">
+                                {item.audioType === 'DUBLADO' ? '📝 Solicitar versão Legendada' : '🎙️ Solicitar versão Dublada'}
+                              </p>
+                              <p className="text-xs" style={{ color: '#9ca3af' }}>
+                                Uma observação será adicionada automaticamente ao pedido.
+                              </p>
+                              <div className="flex gap-2">
+                                <button onClick={() => setAltAudioPanel(null)} className="flex-1 py-2 rounded-lg text-sm transition" style={{ border: '1px solid #2a2a2a', color: '#9ca3af' }}>
+                                  Cancelar
+                                </button>
+                                <button onClick={() => sendAltAudio(item)} disabled={panelLoading} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style={{ backgroundColor: '#f97316' }}>
+                                  {panelLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Painel TV — local */}
+                          {showTvPanel && <TvRequestPanel onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} />}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
 
@@ -369,23 +595,39 @@ export default function VitrinePage() {
                       .filter(t => !results.local.some(l => l.tmdbId === t.tmdbId))
                       .map(item => {
                         const done = requested.includes(item.tmdbId)
+                        const showTvPanel = tvPanel?.tmdbId === item.tmdbId
                         return (
-                          <div key={item.tmdbId} className="flex items-center gap-3 p-3 rounded-xl mb-2" style={{ backgroundColor: '#151515' }}>
-                            <PosterBox posterUrl={item.poster} title={item.title} />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm text-white">{item.title}</p>
-                              <p className="text-xs text-gray-400">{item.year}</p>
-                              <div className="flex items-center gap-1 mt-1">
-                                <XCircle className="w-3.5 h-3.5 text-red-400" />
-                                <span className="text-xs text-red-400">Não disponível</span>
+                          <div key={item.tmdbId} className="mb-2">
+                            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#151515' }}>
+                              <PosterBox posterUrl={item.poster} title={item.title} />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm text-white">{item.title}</p>
+                                <p className="text-xs text-gray-400">{item.year}</p>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <XCircle className="w-3.5 h-3.5 text-red-400" />
+                                  <span className="text-xs text-red-400">Não disponível</span>
+                                </div>
                               </div>
+                              {done
+                                ? <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#60a5fa' }}><CheckCircle className="w-3 h-3" /> Solicitado</span>
+                                : type === 'TV'
+                                  ? <button
+                                      onClick={() => {
+                                        setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.poster })
+                                        setAltAudioPanel(null)
+                                        setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes('')
+                                      }}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0 transition"
+                                      style={{ backgroundColor: showTvPanel ? '#252525' : '#f97316' }}
+                                    >
+                                      {showTvPanel ? 'Cancelar' : <><Send className="w-3 h-3" /> Solicitar</>}
+                                    </button>
+                                  : <button onClick={() => sendRequest(item)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0" style={{ backgroundColor: '#f97316' }}>
+                                      <Send className="w-3 h-3" /> Solicitar
+                                    </button>
+                              }
                             </div>
-                            {done
-                              ? <span className="text-xs text-blue-400 flex items-center gap-1 flex-shrink-0"><CheckCircle className="w-3 h-3" /> Solicitado</span>
-                              : <button onClick={() => sendRequest(item)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0" style={{ backgroundColor: '#f97316' }}>
-                                  <Send className="w-3 h-3" /> Solicitar
-                                </button>
-                            }
+                            {showTvPanel && <TvRequestPanel onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} />}
                           </div>
                         )
                       })}

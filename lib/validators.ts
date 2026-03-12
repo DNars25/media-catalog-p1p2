@@ -90,6 +90,8 @@ export const RecepcaoRequestSchema = z.object({
   type: z.enum(['MOVIE', 'TV']),
   tmdbId: z.number().int().positive().optional().nullable(),
   posterUrl: z.string().url().optional().nullable(),
+  notes: z.string().max(500).optional().nullable(),
+  isUpdate: z.boolean().optional(),
 })
 
 export const LimparConcluidosSchema = z.object({

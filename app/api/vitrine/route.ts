@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     const local = orConditions.length > 0
       ? await prisma.title.findMany({
           where: { type: localType, OR: orConditions },
-          select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true, tmdbId: true },
+          select: { id: true, title: true, releaseYear: true, hasP1: true, hasP2: true, type: true, posterUrl: true, tmdbId: true, audioType: true },
           take: 20,
         })
       : []
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       posterUrl: t.posterUrl,
       tmdbId: t.tmdbId,
       type: t.type,
+      audioType: t.audioType,
     }))
 
     const tmdb = tmdbMatches.slice(0, 10).map(r => ({
