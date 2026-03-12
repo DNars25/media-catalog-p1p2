@@ -71,6 +71,7 @@ export default function AnalyticsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [divData, setDivData] = useState<{ resolverDivergencia: number; resolverMapeamento: number } | null>(null)
 
   useEffect(() => {
     if (status === 'authenticated' && !isAdmin) router.replace('/dashboard')
@@ -83,14 +84,17 @@ export default function AnalyticsPage() {
     const params = new URLSearchParams({ period })
     if (userId) params.set('userId', userId)
     if (mediaType) params.set('mediaType', mediaType)
-    fetch('/api/analytics?' + params.toString())
-      .then(r => r.json())
-      .then(d => {
+    Promise.all([
+      fetch('/api/analytics?' + params.toString()).then(r => r.json()),
+      fetch(`/api/analytics/divergencias?period=${period}`).then(r => r.json()),
+    ])
+      .then(([d, div]) => {
         if (d?.error) { setErrorMsg(d.error); setData(null) }
         else {
           setData(d)
           if (d.allUsers?.length) setAllUsers(d.allUsers)
         }
+        if (!div?.error) setDivData(div)
       })
       .catch(e => { setErrorMsg(String(e)); setData(null) })
       .finally(() => setLoading(false))
@@ -273,6 +277,27 @@ export default function AnalyticsPage() {
               variation={prev ? calcVariation(data.totals.titles, prev.titles) : undefined}
             />
           </div>
+
+          {/* Divergências Resolvidas */}
+          {divData && (
+            <div className='rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4'>
+              <div className='flex items-center gap-2 mb-3'>
+                <AlertTriangle className='w-5 h-5 text-yellow-400' />
+                <span className='text-sm font-semibold text-yellow-300'>Divergências Resolvidas</span>
+                <span className='text-xs text-muted-foreground ml-auto'>{PERIODS.find(p => p.value === period)?.label}</span>
+              </div>
+              <div className='grid grid-cols-2 gap-4'>
+                <div>
+                  <p className='text-2xl font-bold'>{divData.resolverDivergencia.toLocaleString('pt-BR')}</p>
+                  <p className='text-xs text-muted-foreground mt-0.5'>Divergências de temporadas resolvidas</p>
+                </div>
+                <div>
+                  <p className='text-2xl font-bold'>{divData.resolverMapeamento.toLocaleString('pt-BR')}</p>
+                  <p className='text-xs text-muted-foreground mt-0.5'>Resoluções de mapeamento de servidores</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bar chart per user */}
           {data.byUser.length > 0 && (
