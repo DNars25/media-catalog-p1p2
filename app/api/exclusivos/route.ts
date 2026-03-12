@@ -72,13 +72,19 @@ export async function PATCH(req: NextRequest) {
   const { id, action } = await req.json();
   if (!id || !action) return NextResponse.json({ error: 'id e action são obrigatórios' }, { status: 400 });
 
+  const current = await prisma.title.findUnique({ where: { id }, select: { hasP1: true, hasP2: true } });
+  if (!current) return NextResponse.json({ error: 'Título não encontrado' }, { status: 404 });
+
+  const data = action === 'marcar_p2b' ? { hasP2: true } : { hasP1: true };
+  await prisma.title.update({ where: { id }, data });
+
   await logAudit({
     entityType: 'MAPEAMENTO',
     action: 'RESOLVER_MAPEAMENTO',
     entityId: id,
     userId: session.user.id,
-    before: { action },
-    after: null,
+    before: { hasP1: current.hasP1, hasP2: current.hasP2 },
+    after: { ...current, ...data },
   });
 
   return NextResponse.json({ ok: true });
