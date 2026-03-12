@@ -25,14 +25,27 @@ export async function GET(req: NextRequest) {
   const since = getSince(period);
   const dateFilter = since ? { createdAt: { gte: since } } : {};
 
-  const [resolverDivergencia, resolverMapeamento] = await Promise.all([
+  const [resolverDivergencia, resolverMapeamento, auditGroups] = await Promise.all([
     prisma.auditLog.count({
       where: { action: 'RESOLVER_DIVERGENCIA', ...dateFilter },
     }),
     prisma.auditLog.count({
       where: { action: 'RESOLVER_MAPEAMENTO', ...dateFilter },
     }),
+    prisma.auditLog.groupBy({
+      by: ['userId'],
+      where: {
+        action: { in: ['RESOLVER_DIVERGENCIA', 'RESOLVER_MAPEAMENTO'] },
+        ...dateFilter,
+      },
+      _count: { _all: true },
+    }),
   ]);
 
-  return NextResponse.json({ resolverDivergencia, resolverMapeamento });
+  const byUser: Record<string, number> = {};
+  for (const g of auditGroups) {
+    byUser[g.userId] = g._count._all;
+  }
+
+  return NextResponse.json({ resolverDivergencia, resolverMapeamento, byUser });
 }

@@ -6,6 +6,7 @@ const COLORS = {
   corrections: '#ef4444',
   updates: '#a855f7',
   titles: '#22c55e',
+  divergencias: '#eab308',
 }
 
 const LINES = [
@@ -16,37 +17,44 @@ const LINES = [
 ]
 
 // ─── Bar Chart (CSS/Tailwind — zero external deps) ────────────────────────────
-export function UserBarChart({ data }: { data: UserStat[] }) {
+export function UserBarChart({ data, divByUser }: { data: UserStat[]; divByUser?: Record<string, number> }) {
   const max = Math.max(
-    ...data.flatMap(u => [u.requests, u.corrections, u.updates, u.titles]),
+    ...data.flatMap(u => [
+      u.requests, u.corrections, u.updates, u.titles,
+      divByUser ? (divByUser[u.userId] ?? 0) : 0,
+    ]),
     1
   )
 
   return (
     <div>
       <div className='flex items-end gap-4 h-52 overflow-x-auto pb-2'>
-        {data.map(u => (
-          <div key={u.userId} className='flex flex-col items-center gap-1 min-w-[3.5rem] flex-1'>
-            <div className='flex items-end gap-0.5 h-44 w-full justify-center'>
-              {[
-                { value: u.requests, color: 'bg-blue-500' },
-                { value: u.corrections, color: 'bg-red-500' },
-                { value: u.updates, color: 'bg-purple-500' },
-                { value: u.titles, color: 'bg-green-500' },
-              ].map((bar, i) => (
-                <div
-                  key={i}
-                  title={bar.value.toString()}
-                  className={`w-4 rounded-t-sm ${bar.color} transition-all`}
-                  style={{ height: `${Math.max((bar.value / max) * 100, bar.value > 0 ? 2 : 0)}%` }}
-                />
-              ))}
+        {data.map(u => {
+          const div = divByUser?.[u.userId] ?? 0
+          return (
+            <div key={u.userId} className='flex flex-col items-center gap-1 min-w-[3.5rem] flex-1'>
+              <div className='flex items-end gap-0.5 h-44 w-full justify-center'>
+                {[
+                  { value: u.requests, color: 'bg-blue-500' },
+                  { value: u.corrections, color: 'bg-red-500' },
+                  { value: u.updates, color: 'bg-purple-500' },
+                  { value: u.titles, color: 'bg-green-500' },
+                  ...(divByUser ? [{ value: div, color: 'bg-yellow-500' }] : []),
+                ].map((bar, i) => (
+                  <div
+                    key={i}
+                    title={bar.value.toString()}
+                    className={`w-4 rounded-t-sm ${bar.color} transition-all`}
+                    style={{ height: `${Math.max((bar.value / max) * 100, bar.value > 0 ? 2 : 0)}%` }}
+                  />
+                ))}
+              </div>
+              <span className='text-xs text-muted-foreground text-center truncate w-full px-1'>
+                {u.userName.split(' ')[0]}
+              </span>
             </div>
-            <span className='text-xs text-muted-foreground text-center truncate w-full px-1'>
-              {u.userName.split(' ')[0]}
-            </span>
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div className='flex gap-4 flex-wrap mt-3'>
         {LINES.map(l => (
@@ -55,6 +63,12 @@ export function UserBarChart({ data }: { data: UserStat[] }) {
             <span className='text-xs text-muted-foreground'>{l.name}</span>
           </div>
         ))}
+        {divByUser && (
+          <div className='flex items-center gap-1.5'>
+            <div className='w-3 h-3 rounded-sm' style={{ backgroundColor: COLORS.divergencias }} />
+            <span className='text-xs text-muted-foreground'>Divergências</span>
+          </div>
+        )}
       </div>
     </div>
   )

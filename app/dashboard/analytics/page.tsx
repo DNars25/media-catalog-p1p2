@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const [divData, setDivData] = useState<{ resolverDivergencia: number; resolverMapeamento: number } | null>(null)
+  const [divData, setDivData] = useState<{ resolverDivergencia: number; resolverMapeamento: number; byUser: Record<string, number> } | null>(null)
 
   useEffect(() => {
     if (status === 'authenticated' && !isAdmin) router.replace('/dashboard')
@@ -242,8 +242,8 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
-          {/* Stat cards */}
-          <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
+          {/* Stat cards — 5 cards */}
+          <div className='grid grid-cols-2 lg:grid-cols-5 gap-4'>
             <StatCard
               icon={<TrendingUp className='w-5 h-5 text-blue-400' />}
               label='Pedidos'
@@ -276,34 +276,20 @@ export default function AnalyticsPage() {
               colorClass='bg-green-500/10 border-green-500/20'
               variation={prev ? calcVariation(data.totals.titles, prev.titles) : undefined}
             />
+            <StatCard
+              icon={<AlertTriangle className='w-5 h-5 text-yellow-400' />}
+              label='Divergências Resolvidas'
+              value={divData ? divData.resolverDivergencia + divData.resolverMapeamento : 0}
+              sub={divData ? `${divData.resolverDivergencia} temp · ${divData.resolverMapeamento} mapeamento` : 'carregando...'}
+              colorClass='bg-yellow-500/10 border-yellow-500/20'
+            />
           </div>
-
-          {/* Divergências Resolvidas */}
-          {divData && (
-            <div className='rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4'>
-              <div className='flex items-center gap-2 mb-3'>
-                <AlertTriangle className='w-5 h-5 text-yellow-400' />
-                <span className='text-sm font-semibold text-yellow-300'>Divergências Resolvidas</span>
-                <span className='text-xs text-muted-foreground ml-auto'>{PERIODS.find(p => p.value === period)?.label}</span>
-              </div>
-              <div className='grid grid-cols-2 gap-4'>
-                <div>
-                  <p className='text-2xl font-bold'>{divData.resolverDivergencia.toLocaleString('pt-BR')}</p>
-                  <p className='text-xs text-muted-foreground mt-0.5'>Divergências de temporadas resolvidas</p>
-                </div>
-                <div>
-                  <p className='text-2xl font-bold'>{divData.resolverMapeamento.toLocaleString('pt-BR')}</p>
-                  <p className='text-xs text-muted-foreground mt-0.5'>Resoluções de mapeamento de servidores</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Bar chart per user */}
           {data.byUser.length > 0 && (
             <div className='bg-card border border-border rounded-xl p-5'>
               <h2 className='font-semibold mb-4'>Atividade por Usuário</h2>
-              <UserBarChart data={data.byUser} />
+              <UserBarChart data={data.byUser} divByUser={divData?.byUser} />
             </div>
           )}
 
@@ -330,6 +316,7 @@ export default function AnalyticsPage() {
                       <th className='text-center py-3 px-4 text-xs font-semibold text-red-400 uppercase tracking-wider hidden sm:table-cell'>Correções</th>
                       <th className='text-center py-3 px-4 text-xs font-semibold text-purple-400 uppercase tracking-wider hidden sm:table-cell'>Atualizações</th>
                       <th className='text-center py-3 px-4 text-xs font-semibold text-green-400 uppercase tracking-wider hidden md:table-cell'>Títulos</th>
+                      <th className='text-center py-3 px-4 text-xs font-semibold text-yellow-400 uppercase tracking-wider hidden md:table-cell'>Divergências</th>
                       <th className='text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Total</th>
                     </tr>
                   </thead>
@@ -365,9 +352,14 @@ export default function AnalyticsPage() {
                         <td className='py-3 px-4 text-center hidden md:table-cell'>
                           <div className='text-sm font-semibold'>{u.titles}</div>
                         </td>
+                        <td className='py-3 px-4 text-center hidden md:table-cell'>
+                          <div className='text-sm font-semibold text-yellow-400'>
+                            {divData?.byUser?.[u.userId] ?? 0}
+                          </div>
+                        </td>
                         <td className='py-3 px-4 text-right'>
                           <span className='text-sm font-bold'>
-                            {u.requests + u.corrections + u.updates + u.titles}
+                            {u.requests + u.corrections + u.updates + u.titles + (divData?.byUser?.[u.userId] ?? 0)}
                           </span>
                         </td>
                       </tr>
