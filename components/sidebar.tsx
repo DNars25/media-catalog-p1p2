@@ -16,7 +16,7 @@ const navItems = [
   { href: '/dashboard/atualizacoes', icon: RefreshCw, label: 'Atualizações' },
   { href: '/dashboard/correcoes', icon: AlertTriangle, label: 'Correções' },
   { href: '/dashboard/divergencias-p2', icon: AlertTriangle, label: 'Divergências P2' },
-  { href: '/exclusivos', icon: Server, label: 'Exclusivos por Servidor' },
+  { href: '/dashboard/divergencias-exclusivos', icon: Server, label: 'Exclusivos por Servidor', sub: true },
   { href: '/dashboard/tmdb', icon: Database, label: 'TMDB · Capa+Data' },
 ]
 const adminItems = [
@@ -50,7 +50,7 @@ export function Sidebar() {
       {navItems.map((item) => {
         const active = item.href === '/dashboard' ? pathname === '/dashboard' : (pathname || '').startsWith(item.href)
         return (
-          <Link key={item.href} href={item.href} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all', active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary')}>
+          <Link key={item.href} href={item.href} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all', item.sub && 'pl-7', active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary')}>
             <item.icon className='w-4 h-4 shrink-0' />
             {item.label}
             {active && <ChevronRight className='w-3 h-3 ml-auto' />}
