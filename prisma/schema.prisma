@@ -83,6 +83,7 @@ model Title {
   audioType      String?
   hasP1          Boolean        @default(false)
   hasP2          Boolean        @default(false)
+  p2Divergence   Json?
   createdById    String
   createdBy      User           @relation(fields: [createdById], references: [id])
   createdAt      DateTime       @default(now())

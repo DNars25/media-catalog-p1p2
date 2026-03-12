@@ -15,6 +15,7 @@ const navItems = [
   { href: '/dashboard/requests', icon: ClipboardList, label: 'Pedidos' },
   { href: '/dashboard/atualizacoes', icon: RefreshCw, label: 'Atualizações' },
   { href: '/dashboard/correcoes', icon: AlertTriangle, label: 'Correções' },
+  { href: '/dashboard/divergencias-p2', icon: AlertTriangle, label: 'Divergências P2' },
   { href: '/dashboard/tmdb', icon: Database, label: 'TMDB · Capa+Data' },
 ]
 const adminItems = [
