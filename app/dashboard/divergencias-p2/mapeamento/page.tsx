@@ -20,7 +20,6 @@ interface Title {
 
 type TitleType = 'MOVIE' | 'TV';
 type Server = 'b2p' | 'p2b';
-type Step = 'type' | 'results';
 
 function audioBadge(audio: string | null) {
   if (audio === 'DUBLADO_LEGENDADO') return 'bg-purple-500/20 text-purple-300';
@@ -38,7 +37,6 @@ function MapeamentoContent() {
   const searchParams = useSearchParams();
   const server = (searchParams.get('server') ?? 'b2p') as Server;
 
-  const [step, setStep] = useState<Step>('type');
   const [titleType, setTitleType] = useState<TitleType>('MOVIE');
   const [titles, setTitles] = useState<Title[]>([]);
   const [total, setTotal] = useState(0);
@@ -61,15 +59,8 @@ function MapeamentoContent() {
   }, [server]);
 
   useEffect(() => {
-    if (step === 'results') {
-      fetchData(titleType, 1);
-    }
-  }, [step, titleType, fetchData]);
-
-  function handleTypeSelect(t: TitleType) {
-    setTitleType(t);
-    setStep('results');
-  }
+    fetchData(titleType, 1);
+  }, [titleType, fetchData]);
 
   const serverLabel = server === 'b2p' ? 'B2P' : 'P2B';
   const serverColor = server === 'b2p' ? 'text-orange-300' : 'text-blue-300';
@@ -89,55 +80,24 @@ function MapeamentoContent() {
         </p>
       </div>
 
-      {/* Breadcrumb */}
-      {step === 'results' && (
-        <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-          <button onClick={() => setStep('type')} className="hover:text-foreground transition-colors">
-            Tipo
-          </button>
-          <span>›</span>
-          <span className="text-foreground font-medium">{typeLabel}</span>
-        </div>
-      )}
-
-      {/* Passo 1 — escolher tipo */}
-      {step === 'type' && (
-        <div>
-          <p className="text-sm text-muted-foreground mb-5 font-medium uppercase tracking-wider">Selecione o tipo de conteúdo</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              onClick={() => handleTypeSelect('MOVIE')}
-              className="group relative flex flex-col items-start gap-3 p-6 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-orange-500/50 transition-all text-left"
-            >
-              <span className="text-4xl">🎬</span>
-              <div>
-                <p className="text-lg font-semibold">Filmes</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Filmes presentes no {serverLabel} sem cobertura no outro servidor.
-                </p>
-              </div>
-              <span className="absolute top-4 right-4 text-muted-foreground group-hover:text-foreground transition-colors">→</span>
-            </button>
-            <button
-              onClick={() => handleTypeSelect('TV')}
-              className="group relative flex flex-col items-start gap-3 p-6 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-blue-500/50 transition-all text-left"
-            >
-              <span className="text-4xl">📺</span>
-              <div>
-                <p className="text-lg font-semibold">Séries</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Séries presentes no {serverLabel} sem cobertura no outro servidor.
-                </p>
-              </div>
-              <span className="absolute top-4 right-4 text-muted-foreground group-hover:text-foreground transition-colors">→</span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Abas Filmes / Séries */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setTitleType('MOVIE')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${titleType === 'MOVIE' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+        >
+          🎬 Filmes
+        </button>
+        <button
+          onClick={() => setTitleType('TV')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${titleType === 'TV' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+        >
+          📺 Séries
+        </button>
+      </div>
 
       {/* Resultados */}
-      {step === 'results' && (
-        <div>
+      <div>
           <div className={`rounded-lg p-4 mb-6 flex items-center gap-3 border ${serverBorder}`}>
             <span className="text-2xl">{server === 'b2p' ? '🟠' : '🔵'}</span>
             <div>
@@ -222,8 +182,7 @@ function MapeamentoContent() {
               </button>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
