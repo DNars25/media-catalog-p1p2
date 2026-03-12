@@ -308,6 +308,7 @@ export default function VitrinePage() {
   const [reported, setReported] = useState<number[]>([])
   const [correctingId, setCorrectingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
+  const [feedbackError, setFeedbackError] = useState(false)
   const [pendingItems, setPendingItems] = useState<number[]>([])
   const [altAudioPanel, setAltAudioPanel] = useState<string | null>(null)
   const [tvPanel, setTvPanel] = useState<{ tmdbId: number; title: string; posterUrl: string | null; localId?: string } | null>(null)
@@ -328,6 +329,7 @@ export default function VitrinePage() {
     setResults(null)
     setQuery('')
     setFeedback('')
+    setFeedbackError(false)
     setCorrectingId(null)
     closePanels()
   }
@@ -357,12 +359,15 @@ export default function VitrinePage() {
       if (res.ok) {
         setRequested(prev => [...prev, item.tmdbId])
         closePanels()
+        setFeedbackError(false)
         setFeedback('Pedido enviado com sucesso!')
       } else if (res.status === 409) {
         setPendingItems(prev => [...prev, item.tmdbId])
         closePanels()
+        setFeedbackError(true)
         setFeedback('Já existe um pedido em aberto para este título.')
       } else {
+        setFeedbackError(true)
         setFeedback('Erro ao enviar pedido. Tente novamente.')
       }
     } finally {
@@ -388,12 +393,15 @@ export default function VitrinePage() {
       if (res.ok) {
         setRequested(prev => [...prev, tvPanel.tmdbId])
         closePanels()
+        setFeedbackError(false)
         setFeedback('Pedido enviado com sucesso!')
       } else if (res.status === 409) {
         setPendingItems(prev => [...prev, tvPanel.tmdbId])
         closePanels()
+        setFeedbackError(true)
         setFeedback('Já existe um pedido em aberto para este título.')
       } else {
+        setFeedbackError(true)
         setFeedback('Erro ao enviar pedido. Tente novamente.')
       }
     } finally {
@@ -415,6 +423,7 @@ export default function VitrinePage() {
       if (!res.ok) throw new Error()
       setResults(await res.json())
     } catch {
+      setFeedbackError(true)
       setFeedback('Erro ao buscar. Tente novamente.')
       setResults({ local: [], tmdb: [] })
     } finally {
@@ -430,8 +439,10 @@ export default function VitrinePage() {
     })
     if (res.ok) {
       setRequested(prev => [...prev, item.tmdbId])
+      setFeedbackError(false)
       setFeedback('Pedido enviado com sucesso!')
     } else {
+      setFeedbackError(true)
       setFeedback('Erro ao enviar pedido. Tente novamente.')
     }
   }
@@ -511,7 +522,10 @@ export default function VitrinePage() {
 
         {/* Feedback */}
         {feedback && (
-          <div className="mt-3 p-3 rounded-lg text-center text-sm" style={{ backgroundColor: '#1a3a1a', color: '#4ade80' }}>
+          <div
+            className={`mt-3 p-3 rounded-lg text-center text-sm border ${feedbackError ? 'bg-red-900/40 border-red-500/50 text-red-400' : 'border-transparent text-green-400'}`}
+            style={feedbackError ? {} : { backgroundColor: '#1a3a1a' }}
+          >
             {feedback}
           </div>
         )}
@@ -724,6 +738,7 @@ export default function VitrinePage() {
                                 onSent={() => {
                                   setReported(prev => [...prev, item.tmdbId])
                                   setCorrectingId(null)
+                                  setFeedbackError(false)
                                   setFeedback('Report enviado! Nossa equipe irá verificar.')
                                 }}
                               />
