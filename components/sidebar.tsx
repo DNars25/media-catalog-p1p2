@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
-import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database, BarChart2, ClipboardCheck, Server } from 'lucide-react'
+import { Film, Tv, LayoutDashboard, PlusCircle, List, ClipboardList, Users, Settings, LogOut, ChevronRight, RefreshCw, Menu, X, AlertTriangle, Database, BarChart2, ClipboardCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NotificationBell } from '@/components/notification-bell'
 const navItems = [
@@ -16,7 +16,6 @@ const navItems = [
   { href: '/dashboard/atualizacoes', icon: RefreshCw, label: 'Atualizações' },
   { href: '/dashboard/correcoes', icon: AlertTriangle, label: 'Correções' },
   { href: '/dashboard/divergencias-p2', icon: AlertTriangle, label: 'Divergências P2' },
-  { href: '/dashboard/divergencias-exclusivos', icon: Server, label: 'Mapeamento de Servidores', sub: true },
   { href: '/dashboard/tmdb', icon: Database, label: 'TMDB · Capa+Data' },
 ]
 const adminItems = [
