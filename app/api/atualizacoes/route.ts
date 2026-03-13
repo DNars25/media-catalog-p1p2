@@ -52,8 +52,13 @@ export async function GET(req: NextRequest) {
   const needsIncomplete = statusFilter === 'INCOMPLETAS'
   const incompleteIds = needsIncomplete ? await getIncompleteIds() : []
 
-  const conditions: Prisma.TitleWhereInput[] = [{ type: 'TV' }]
+  // Short-circuit: INCOMPLETAS with no candidates
+  if (needsIncomplete && incompleteIds.length === 0) {
+    return NextResponse.json({ series: [], total: 0, page, limit, pages: 0 })
+  }
 
+  // Search: get matching IDs
+  let searchIds: string[] | null = null
   if (search) {
     const matches = await prisma.$queryRaw<{ id: string }[]>`
       SELECT id FROM "Title"
@@ -61,109 +66,118 @@ export async function GET(req: NextRequest) {
         AND unaccent(lower(title)) LIKE unaccent(lower(${`%${search}%`}))
       LIMIT 100
     `
-    conditions.push({ id: { in: matches.map(r => r.id) } })
+    if (matches.length === 0) {
+      return NextResponse.json({ series: [], total: 0, page, limit, pages: 0 })
+    }
+    searchIds = matches.map(r => r.id)
   }
 
-  const activeStatuses: RequestStatus[] = ['ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO']
+  // Build composable SQL filter condition
+  let filter = Prisma.sql`TRUE`
+
+  if (searchIds !== null) {
+    filter = Prisma.sql`${filter} AND t.id IN (${Prisma.join(searchIds)})`
+  }
 
   if (statusFilter === 'PEDIDOS') {
-    // TV com isUpdate request criado explicitamente via "Nova Atualização"
-    conditions.push({
-      requests: {
-        some: {
-          isUpdate: true,
-          source: 'PEDIDO',
-          status: { in: activeStatuses },
-        },
-      },
-    })
+    filter = Prisma.sql`${filter} AND EXISTS (
+      SELECT 1 FROM "Request" r2 WHERE r2."linkedTitleId" = t.id
+        AND r2."isUpdate" = true AND r2.source = 'PEDIDO'
+        AND r2.status IN ('ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO')
+    )`
   } else if (statusFilter === 'EM_ANDAMENTO') {
-    conditions.push({ tvStatus: 'EM_ANDAMENTO' })
+    filter = Prisma.sql`${filter} AND t."tvStatus" = 'EM_ANDAMENTO'`
   } else if (statusFilter === 'INCOMPLETAS') {
-    conditions.push({ id: { in: incompleteIds } })
+    filter = Prisma.sql`${filter} AND t.id IN (${Prisma.join(incompleteIds)})`
   } else if (statusFilter === 'SOLICITADO_VITRINE') {
-    // TV with isUpdate request, source=VITRINE, status ativo
-    conditions.push({
-      requests: {
-        some: {
-          isUpdate: true,
-          source: 'VITRINE',
-          status: { in: activeStatuses },
-        },
-      },
-    })
+    filter = Prisma.sql`${filter} AND EXISTS (
+      SELECT 1 FROM "Request" r2 WHERE r2."linkedTitleId" = t.id
+        AND r2."isUpdate" = true AND r2.source = 'VITRINE'
+        AND r2.status IN ('ABERTO', 'EM_ANDAMENTO', 'EM_PROGRESSO')
+    )`
   } else if (statusFilter === 'ATUALIZADO_RECENTEMENTE') {
-    // TV com qualquer isUpdate CONCLUIDO
-    conditions.push({
-      requests: {
-        some: {
-          isUpdate: true,
-          status: 'CONCLUIDO' as RequestStatus,
-        },
-      },
-    })
+    filter = Prisma.sql`${filter} AND EXISTS (
+      SELECT 1 FROM "Request" r2 WHERE r2."linkedTitleId" = t.id
+        AND r2."isUpdate" = true AND r2.status = 'CONCLUIDO'
+    )`
   } else if (statusFilter === 'CONCLUIDAS') {
-    // tvStatus=FINALIZADA + tem CONCLUIDO isUpdate request
-    conditions.push({
-      tvStatus: 'FINALIZADA',
-      requests: {
-        some: {
-          isUpdate: true,
-          status: 'CONCLUIDO' as RequestStatus,
-        },
-      },
-    })
+    filter = Prisma.sql`${filter} AND t."tvStatus" = 'FINALIZADA' AND EXISTS (
+      SELECT 1 FROM "Request" r2 WHERE r2."linkedTitleId" = t.id
+        AND r2."isUpdate" = true AND r2.status = 'CONCLUIDO'
+    )`
   }
-  // statusFilter === '' → Todas (sem filtro extra)
 
-  const where: Prisma.TitleWhereInput = conditions.length === 1 ? conditions[0] : { AND: conditions }
-
-  const [total, titles] = await Promise.all([
-    prisma.title.count({ where }),
-    prisma.title.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: statusFilter === 'EM_ANDAMENTO'
-        ? [{ requests: { _count: 'desc' } }, { title: 'asc' }]
-        : { title: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        posterUrl: true,
-        tvSeasons: true,
-        tvEpisodes: true,
-        tvStatus: true,
-        tmdbId: true,
-        _count: {
-          select: {
-            episodes: true,
-            requests: {
-              where: { isUpdate: true, source: 'VITRINE', status: { not: 'CONCLUIDO' as RequestStatus } },
-            },
-          },
-        },
-        requests: {
-          where: { isUpdate: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: {
-            id: true,
-            status: true,
-            audioType: true,
-            seasonNumber: true,
-            notes: true,
-            source: true,
-            createdAt: true,
-            createdById: true,
-            createdBy: { select: { name: true, email: true } },
-          },
-        },
-      },
-    }),
+  // Run count + sorted IDs in parallel
+  // IDs ordered by pendingUpdateCount (VITRINE+isUpdate+not-CONCLUIDO) desc, then title asc
+  const [totalResult, sortedRows] = await Promise.all([
+    prisma.$queryRaw<[{ n: bigint }]>`
+      SELECT COUNT(DISTINCT t.id)::bigint AS n
+      FROM "Title" t WHERE t.type = 'TV' AND ${filter}
+    `,
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT t.id
+      FROM "Title" t
+      LEFT JOIN "Request" pending ON pending."linkedTitleId" = t.id
+        AND pending."isUpdate" = true
+        AND pending.source = 'VITRINE'
+        AND pending.status != 'CONCLUIDO'
+      WHERE t.type = 'TV' AND ${filter}
+      GROUP BY t.id, t.title
+      ORDER BY COUNT(pending.id) DESC, t.title ASC
+      LIMIT ${limit} OFFSET ${skip}
+    `,
   ])
 
-  const series = titles.map(({ requests, _count, ...t }) => ({
+  const total = Number(totalResult[0].n)
+  const idOrder = sortedRows.map(r => r.id)
+
+  if (idOrder.length === 0) {
+    return NextResponse.json({ series: [], total, page, limit, pages: Math.ceil(total / limit) })
+  }
+
+  // Fetch full records for this page using the sorted IDs
+  const titles = await prisma.title.findMany({
+    where: { id: { in: idOrder } },
+    select: {
+      id: true,
+      title: true,
+      posterUrl: true,
+      tvSeasons: true,
+      tvEpisodes: true,
+      tvStatus: true,
+      tmdbId: true,
+      _count: {
+        select: {
+          episodes: true,
+          requests: {
+            where: { isUpdate: true, source: 'VITRINE', status: { not: 'CONCLUIDO' as RequestStatus } },
+          },
+        },
+      },
+      requests: {
+        where: { isUpdate: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          audioType: true,
+          seasonNumber: true,
+          notes: true,
+          source: true,
+          createdAt: true,
+          createdById: true,
+          createdBy: { select: { name: true, email: true } },
+        },
+      },
+    },
+  })
+
+  // Re-sort by idOrder (findMany with `in` does not guarantee order)
+  const titlesMap = new Map(titles.map(t => [t.id, t]))
+  const ordered = idOrder.map(id => titlesMap.get(id)).filter((t): t is NonNullable<typeof t> => t != null)
+
+  const series = ordered.map(({ requests, _count, ...t }) => ({
     ...t,
     savedEpisodeCount: _count.episodes,
     pendingUpdateCount: _count.requests,
