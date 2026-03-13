@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { Search, Film, Tv, CheckCircle, XCircle, Send, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Film, Tv, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 type Mode = 'pedido' | 'correcao'
 type ContentType = 'MOVIE' | 'TV'
@@ -23,28 +23,26 @@ interface TmdbItem {
   year: string
   poster: string | null
 }
-
-function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-all"
-      style={{ backgroundColor: active ? '#f97316' : '#252525', border: active ? '1px solid #f97316' : '1px solid #2a2a2a' }}
-    >
-      {label}
-    </button>
-  )
+interface Stats {
+  pendingThisMonth: number
+  totalCompleted: number
 }
 
-function PosterBox({ posterUrl, title }: { posterUrl: string | null; title: string }) {
+function AudioBadge({ audioType }: { audioType: string | null }) {
+  if (audioType === 'DUBLADO') return <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Dub</span>
+  if (audioType === 'LEGENDADO') return <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Leg</span>
+  if (audioType === 'DUBLADO_LEGENDADO') return <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#14532d40', color: '#4ade80' }}>Dub+Leg</span>
+  return null
+}
+
+function PosterThumb({ posterUrl, title }: { posterUrl: string | null; title: string }) {
   return posterUrl
-    ? <img src={posterUrl} alt={title} className="w-12 rounded object-cover flex-shrink-0" style={{ height: '68px', minWidth: '46px' }} />
-    : <div className="w-12 rounded flex items-center justify-center flex-shrink-0" style={{ height: '68px', minWidth: '46px', backgroundColor: '#2a2a2a' }}>
+    ? <img src={posterUrl} alt={title} className="rounded object-cover flex-shrink-0" style={{ width: '46px', height: '68px' }} />
+    : <div className="rounded flex items-center justify-center flex-shrink-0" style={{ width: '46px', height: '68px', backgroundColor: '#222222' }}>
         <Film className="w-4 h-4 text-gray-600" />
       </div>
 }
 
-// ── Inline form shown after selecting a title for correction ──
 function CorrectForm({
   item,
   type,
@@ -64,7 +62,6 @@ function CorrectForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Only show servers that the title actually has
   const servers: ('B2P' | 'P2B')[] = []
   if (item.hasP1) servers.push('B2P')
   if (item.hasP2) servers.push('P2B')
@@ -99,19 +96,19 @@ function CorrectForm({
   }
 
   return (
-    <div className="mt-2 rounded-xl p-4 space-y-3" style={{ backgroundColor: '#1a1010', border: '1px solid #3a1a1a' }}>
-      <p className="text-sm font-semibold text-white">"{item.title}"</p>
-
-      {/* Tipo do problema */}
+    <div className="space-y-4">
       <div>
-        <p className="text-xs text-gray-400 mb-2">Tipo do problema</p>
+        <p className="text-xs mb-2" style={{ color: '#9ca3af' }}>Tipo do problema</p>
         <div className="flex gap-2">
           {(['offline', 'outro'] as const).map(pt => (
             <button
               key={pt}
               onClick={() => { setProblemType(pt); setProblem('') }}
               className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
-              style={{ backgroundColor: problemType === pt ? '#ef4444' : '#252525', border: problemType === pt ? '1px solid #ef4444' : '1px solid #2a2a2a' }}
+              style={{
+                backgroundColor: problemType === pt ? '#ef4444' : '#222222',
+                border: problemType === pt ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.07)',
+              }}
             >
               {pt === 'offline' ? 'Offline' : 'Outro Problema'}
             </button>
@@ -119,16 +116,18 @@ function CorrectForm({
         </div>
       </div>
 
-      {/* Servidor */}
       <div>
-        <p className="text-xs text-gray-400 mb-2">Sistema</p>
+        <p className="text-xs mb-2" style={{ color: '#9ca3af' }}>Sistema</p>
         <div className="flex gap-2">
           {servers.map(s => (
             <button
               key={s}
               onClick={() => setServer(s)}
               className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all"
-              style={{ backgroundColor: server === s ? '#ef4444' : '#252525', border: server === s ? '1px solid #ef4444' : '1px solid #2a2a2a' }}
+              style={{
+                backgroundColor: server === s ? '#ef4444' : '#222222',
+                border: server === s ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.07)',
+              }}
             >
               {s}
             </button>
@@ -136,26 +135,24 @@ function CorrectForm({
         </div>
       </div>
 
-      {/* Descrição — apenas para Outro Problema */}
       {problemType === 'outro' && (
         <div>
-          <p className="text-xs text-gray-400 mb-1">Descreva o problema <span className="text-red-400">*</span></p>
+          <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Descreva o problema <span className="text-red-400">*</span></p>
           <textarea
             value={problem}
             onChange={e => setProblem(e.target.value)}
             placeholder="Ex: Áudio dessincronizado, legendas incorretas..."
             rows={3}
             className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none"
-            style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+            style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
           />
         </div>
       )}
 
-      {/* Temporada / Episódios (somente TV) */}
       {type === 'TV' && (
         <div className="flex gap-2">
           <div className="flex-1">
-            <p className="text-xs text-gray-400 mb-1">Temporada</p>
+            <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Temporada</p>
             <input
               type="number"
               min={1}
@@ -163,18 +160,20 @@ function CorrectForm({
               onChange={e => setSeason(e.target.value)}
               placeholder="Ex: 2"
               className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-              style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+              style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
             />
           </div>
           <div className="flex-1">
-            <p className="text-xs text-gray-400 mb-1">Episódios <span className="text-gray-600">(opcional)</span></p>
+            <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>
+              Episódios <span style={{ color: '#374151' }}>(opcional)</span>
+            </p>
             <input
               type="text"
               value={episodes}
               onChange={e => setEpisodes(e.target.value)}
               placeholder="Ex: 3, 5-8"
               className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-              style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+              style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
             />
           </div>
         </div>
@@ -182,18 +181,18 @@ function CorrectForm({
 
       {error && <p className="text-xs text-red-400">{error}</p>}
 
-      <div className="flex gap-2 pt-1">
+      <div className="flex gap-2">
         <button
           onClick={onCancel}
-          className="flex-1 py-2 rounded-lg text-sm text-gray-400 transition"
-          style={{ border: '1px solid #2a2a2a' }}
+          className="py-2.5 px-4 rounded-xl text-sm transition"
+          style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#9ca3af' }}
         >
           Cancelar
         </button>
         <button
           onClick={handleSubmit}
           disabled={loading || !canSubmit}
-          className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
+          className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50"
           style={{ backgroundColor: '#ef4444' }}
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar Report'}
@@ -203,101 +202,6 @@ function CorrectForm({
   )
 }
 
-// ── TV Request Panel ──
-function TvRequestPanel({
-  onCancel, onConfirm, tvMode, setTvMode, tvSubSeasons, setTvSubSeasons,
-  tvSubEpisodes, setTvSubEpisodes, panelLoading, buildTvNote, isLocal,
-}: {
-  onCancel: () => void
-  onConfirm: () => void
-  tvMode: 'new' | 'update' | 'substitution'
-  setTvMode: (m: 'new' | 'update' | 'substitution') => void
-  tvSubSeasons: string
-  setTvSubSeasons: (v: string) => void
-  tvSubEpisodes: string
-  setTvSubEpisodes: (v: string) => void
-  panelLoading: boolean
-  buildTvNote: (mode: 'new' | 'update' | 'substitution', s: string, e: string) => string
-  isLocal?: boolean
-}) {
-  const allOptions: { value: 'new' | 'update' | 'substitution'; label: string; icon: string }[] = [
-    { value: 'new', label: 'Novo título', icon: '🆕' },
-    { value: 'update', label: 'Atualização de episódios/temporadas', icon: '🔄' },
-    { value: 'substitution', label: 'Substituição de áudio (Dub↔Leg)', icon: '🎙️' },
-  ]
-  const options = isLocal ? allOptions.filter(o => o.value !== 'new') : allOptions
-
-  const note = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
-
-  return (
-    <div className="mt-1 rounded-xl p-4 space-y-3" style={{ backgroundColor: '#0f1a0f', border: '1px solid #1a3a1a' }}>
-      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6b7280' }}>Tipo de pedido</p>
-      <div className="space-y-2">
-        {options.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes('') }}
-            className="w-full flex items-center gap-3 p-3 rounded-xl text-left text-sm font-medium text-white transition"
-            style={{
-              backgroundColor: tvMode === opt.value ? '#14532d40' : '#1a1a1a',
-              border: tvMode === opt.value ? '1px solid #166534' : '1px solid #2a2a2a',
-            }}
-          >
-            <span>{opt.icon}</span>
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {tvMode === 'substitution' && (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Temporada(s)</p>
-            <input
-              value={tvSubSeasons}
-              onChange={e => setTvSubSeasons(e.target.value)}
-              placeholder="Ex: T2"
-              className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-              style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
-            />
-          </div>
-          <div>
-            <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Episódio(s)</p>
-            <input
-              value={tvSubEpisodes}
-              onChange={e => setTvSubEpisodes(e.target.value)}
-              placeholder="Ex: Ep 1 ao 10"
-              className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
-              style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
-            />
-          </div>
-        </div>
-      )}
-
-      {note && (
-        <p className="text-xs rounded-lg px-3 py-2" style={{ backgroundColor: '#1a1a2a', color: '#93c5fd' }}>
-          {note}
-        </p>
-      )}
-
-      <div className="flex gap-2 pt-1">
-        <button onClick={onCancel} className="flex-1 py-2 rounded-lg text-sm transition" style={{ border: '1px solid #2a2a2a', color: '#9ca3af' }}>
-          Cancelar
-        </button>
-        <button
-          onClick={onConfirm}
-          disabled={panelLoading}
-          className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50"
-          style={{ backgroundColor: '#f97316' }}
-        >
-          {panelLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Main page ──
 export default function VitrinePage() {
   const [mode, setMode] = useState<Mode>('pedido')
   const [type, setType] = useState<ContentType>('MOVIE')
@@ -306,20 +210,24 @@ export default function VitrinePage() {
   const [results, setResults] = useState<{ local: LocalItem[]; tmdb: TmdbItem[] } | null>(null)
   const [requested, setRequested] = useState<number[]>([])
   const [reported, setReported] = useState<number[]>([])
-  const [correctingId, setCorrectingId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
   const [feedbackError, setFeedbackError] = useState(false)
   const [pendingItems, setPendingItems] = useState<number[]>([])
-  const [altAudioPanel, setAltAudioPanel] = useState<string | null>(null)
-  const [tvPanel, setTvPanel] = useState<{ tmdbId: number; title: string; posterUrl: string | null; localId?: string } | null>(null)
+  const [selectedLocal, setSelectedLocal] = useState<LocalItem | null>(null)
+  const [selectedTmdb, setSelectedTmdb] = useState<TmdbItem | null>(null)
   const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
   const [tvSubSeasons, setTvSubSeasons] = useState('')
   const [tvSubEpisodes, setTvSubEpisodes] = useState('')
   const [panelLoading, setPanelLoading] = useState(false)
+  const [stats, setStats] = useState<Stats | null>(null)
 
-  function closePanels() {
-    setAltAudioPanel(null)
-    setTvPanel(null)
+  useEffect(() => {
+    fetch('/api/vitrine/stats').then(r => r.json()).then(setStats).catch(() => {})
+  }, [])
+
+  function clearSelection() {
+    setSelectedLocal(null)
+    setSelectedTmdb(null)
     setTvMode('new')
     setTvSubSeasons('')
     setTvSubEpisodes('')
@@ -330,16 +238,16 @@ export default function VitrinePage() {
     setQuery('')
     setFeedback('')
     setFeedbackError(false)
-    setCorrectingId(null)
-    closePanels()
+    clearSelection()
   }
 
-  function buildTvNote(mode: 'new' | 'update' | 'substitution', seasons: string, episodes: string): string {
-    if (mode === 'update') return 'Solicitação de atualização de episódios/temporadas.'
-    if (mode === 'substitution') {
-      const parts = [seasons.trim(), episodes.trim()].filter(Boolean)
-      if (!parts.length) return 'Solicitação de substituição de áudio.'
-      return `Solicitação de substituição de áudio — ${parts.join(', ')}.`
+  function buildTvNote(m: 'new' | 'update' | 'substitution', seasons: string, eps: string): string {
+    if (m === 'update') return 'Solicitação de atualização de episódios/temporadas.'
+    if (m === 'substitution') {
+      const parts = [seasons.trim(), eps.trim()].filter(Boolean)
+      return parts.length
+        ? `Solicitação de substituição de áudio — ${parts.join(', ')}.`
+        : 'Solicitação de substituição de áudio.'
     }
     return ''
   }
@@ -359,12 +267,12 @@ export default function VitrinePage() {
       })
       if (res.ok) {
         setRequested(prev => [...prev, item.tmdbId])
-        closePanels()
+        clearSelection()
         setFeedbackError(false)
         setFeedback('Pedido enviado com sucesso!')
       } else if (res.status === 409) {
         setPendingItems(prev => [...prev, item.tmdbId])
-        closePanels()
+        clearSelection()
         setFeedbackError(true)
         setFeedback('Já existe um pedido em aberto para este título.')
       } else {
@@ -377,28 +285,31 @@ export default function VitrinePage() {
   }
 
   async function sendTvRequest() {
-    if (!tvPanel) return
+    const item = selectedLocal || selectedTmdb
+    if (!item) return
     setPanelLoading(true)
     try {
       const notes = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+      const posterUrl = 'posterUrl' in item ? item.posterUrl : item.poster
+      const linkedTitleId = selectedLocal ? selectedLocal.id : null
       const res = await fetch('/api/recepcao-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: tvPanel.title, type: 'TV', posterUrl: tvPanel.posterUrl, tmdbId: tvPanel.tmdbId,
+          title: item.title, type: 'TV', posterUrl, tmdbId: item.tmdbId,
           notes: notes || null,
           isUpdate: tvMode === 'update',
-          linkedTitleId: tvPanel.localId ?? null,
+          linkedTitleId,
         }),
       })
       if (res.ok) {
-        setRequested(prev => [...prev, tvPanel.tmdbId])
-        closePanels()
+        setRequested(prev => [...prev, item.tmdbId])
+        clearSelection()
         setFeedbackError(false)
         setFeedback('Pedido enviado com sucesso!')
       } else if (res.status === 409) {
-        setPendingItems(prev => [...prev, tvPanel.tmdbId])
-        closePanels()
+        setPendingItems(prev => [...prev, item.tmdbId])
+        clearSelection()
         setFeedbackError(true)
         setFeedback('Já existe um pedido em aberto para este título.')
       } else {
@@ -410,15 +321,29 @@ export default function VitrinePage() {
     }
   }
 
-  const handleModeChange = (m: Mode) => { setMode(m); reset() }
-  const handleTypeChange = (t: ContentType) => { setType(t); reset() }
+  async function sendRequest(item: TmdbItem) {
+    const res = await fetch('/api/recepcao-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: item.title, type, posterUrl: item.poster, tmdbId: item.tmdbId }),
+    })
+    if (res.ok) {
+      setRequested(prev => [...prev, item.tmdbId])
+      clearSelection()
+      setFeedbackError(false)
+      setFeedback('Pedido enviado com sucesso!')
+    } else {
+      setFeedbackError(true)
+      setFeedback('Erro ao enviar pedido. Tente novamente.')
+    }
+  }
 
   const search = async () => {
     if (query.trim().length < 2) return
     setLoading(true)
     setResults(null)
     setFeedback('')
-    setCorrectingId(null)
+    clearSelection()
     try {
       const res = await fetch('/api/vitrine?q=' + encodeURIComponent(query.trim()) + '&type=' + type)
       if (!res.ok) throw new Error()
@@ -432,329 +357,517 @@ export default function VitrinePage() {
     }
   }
 
-  const sendRequest = async (item: TmdbItem) => {
-    const res = await fetch('/api/recepcao-request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: item.title, type, posterUrl: item.poster, tmdbId: item.tmdbId }),
-    })
-    if (res.ok) {
-      setRequested(prev => [...prev, item.tmdbId])
-      setFeedbackError(false)
-      setFeedback('Pedido enviado com sucesso!')
-    } else {
-      setFeedbackError(true)
-      setFeedback('Erro ao enviar pedido. Tente novamente.')
+  function handleSelectLocal(item: LocalItem) {
+    if (selectedLocal?.id === item.id) { clearSelection(); return }
+    setSelectedLocal(item)
+    setSelectedTmdb(null)
+    if (item.type === 'TV') { setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes('') }
+  }
+
+  function handleSelectTmdb(item: TmdbItem) {
+    if (selectedTmdb?.tmdbId === item.tmdbId) { clearSelection(); return }
+    setSelectedTmdb(item)
+    setSelectedLocal(null)
+    if (type === 'TV') { setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes('') }
+  }
+
+  function handleConfirm() {
+    if (selectedLocal) {
+      selectedLocal.type === 'TV' ? sendTvRequest() : sendAltAudio(selectedLocal)
+    } else if (selectedTmdb) {
+      type === 'TV' ? sendTvRequest() : sendRequest(selectedTmdb)
     }
   }
 
-  const typeLabel = type === 'MOVIE' ? 'filme' : 'série'
-  const placeholder = mode === 'pedido'
-    ? `Buscar ${typeLabel}...`
-    : `Buscar ${typeLabel} no catálogo...`
+  const handleModeChange = (m: Mode) => { setMode(m); reset() }
+  const handleTypeChange = (t: ContentType) => { setType(t); reset() }
+
+  const hasSelection = !!(selectedLocal || selectedTmdb)
+  const isCorrection = mode === 'correcao'
+  const isTV = selectedLocal ? selectedLocal.type === 'TV' : type === 'TV' && !!selectedTmdb
+  const tvNote = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+
+  const tvOptions: { value: 'new' | 'update' | 'substitution'; label: string; desc: string }[] = [
+    { value: 'new', label: 'Novo título', desc: 'Adicionar série ao catálogo' },
+    { value: 'update', label: 'Atualização', desc: 'Novos episódios ou temporadas' },
+    { value: 'substitution', label: 'Substituição de áudio', desc: 'Trocar Dub ↔ Leg' },
+  ]
+  const availableTvOptions = selectedLocal ? tvOptions.filter(o => o.value !== 'new') : tvOptions
+
+  const selectedPoster = selectedLocal ? selectedLocal.posterUrl : selectedTmdb?.poster ?? null
+  const selectedTitle = selectedLocal?.title ?? selectedTmdb?.title ?? ''
+  const selectedYear = selectedLocal ? selectedLocal.year : selectedTmdb?.year ?? null
 
   return (
-    <div
-      className="min-h-screen px-4 py-8"
-      style={{
-        backgroundColor: '#080808',
-        backgroundImage: 'url(/layout/Layout-1.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      <div className="max-w-xl mx-auto">
+    <div style={{ backgroundColor: '#0f0f0f', minHeight: '100vh' }}>
+      {/* Background */}
+      <div
+        style={{
+          position: 'fixed', inset: 0,
+          backgroundImage: 'url(/layout/Layout-1.png)',
+          backgroundSize: 'cover', backgroundPosition: 'center',
+          opacity: 0.12, pointerEvents: 'none',
+        }}
+      />
 
+      <div style={{ position: 'relative', zIndex: 1 }}>
         {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img src="/Logo-transparente.png" alt="Encoding Solutions" style={{ width: '300px', maxWidth: '90vw' }} />
+        <div className="flex justify-center pt-8 pb-4">
+          <img src="/Logo-transparente.png" alt="Encoding Solutions" style={{ width: '200px', maxWidth: '60vw' }} />
         </div>
 
-        <div className="rounded-2xl p-6 space-y-5" style={{ backgroundColor: '#151515' }}>
-
-          {/* Solicitação Para */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Solicitação Para</p>
-            <div className="flex gap-2">
-              <Chip label="Pedido" active={mode === 'pedido'} onClick={() => handleModeChange('pedido')} />
-              <Chip label="Correção" active={mode === 'correcao'} onClick={() => handleModeChange('correcao')} />
-            </div>
-            {mode === 'correcao' && (
-              <p className="text-xs text-gray-600 mt-2">Reporte somente títulos ou episódios offline.</p>
-            )}
-          </div>
-
-          {/* Tipo */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Tipo</p>
-            <div className="flex gap-2">
-              <Chip label="Filme" active={type === 'MOVIE'} onClick={() => handleTypeChange('MOVIE')} />
-              <Chip label="Série" active={type === 'TV'} onClick={() => handleTypeChange('TV')} />
-            </div>
-          </div>
-
-          {/* Buscar */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-              Buscar {type === 'MOVIE' ? 'Filme' : 'Série'}
+        {/* Hero */}
+        <div className="relative overflow-hidden mx-4 rounded-2xl mb-5" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{
+            position: 'absolute', right: '-60px', top: '-60px',
+            width: '260px', height: '260px',
+            background: 'radial-gradient(circle, rgba(232,80,10,0.28) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+          <div className="px-6 py-7 relative">
+            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#E8500A' }}>
+              Central de Solicitações
             </p>
-            <div className="flex gap-2">
+            <h1 className="text-2xl font-bold text-white mb-1">O que você quer assistir?</h1>
+            <p className="text-sm" style={{ color: '#6b7280' }}>Faça seu pedido — nossa equipe cuida do resto</p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="mx-4 mb-5">
+          <div className="flex gap-0 rounded-xl p-1" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {(['pedido', 'correcao'] as const).map(m => (
+              <button
+                key={m}
+                onClick={() => handleModeChange(m)}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all"
+                style={{
+                  backgroundColor: mode === m ? '#E8500A' : 'transparent',
+                  color: mode === m ? '#ffffff' : '#6b7280',
+                }}
+              >
+                {m === 'pedido' ? 'Pedido' : 'Correção'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Two-column layout */}
+        <div className="mx-4 mb-10 flex flex-col lg:flex-row gap-4 items-start">
+
+          {/* LEFT: search + results */}
+          <div className="w-full lg:flex-1 min-w-0">
+
+            {/* Type toggle */}
+            <div className="flex gap-3 mb-4">
+              {(['MOVIE', 'TV'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => handleTypeChange(t)}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all"
+                  style={{
+                    backgroundColor: type === t ? '#1a1a1a' : 'transparent',
+                    color: type === t ? '#ffffff' : '#6b7280',
+                    border: type === t ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                  }}
+                >
+                  {t === 'MOVIE' ? <Film className="w-4 h-4" /> : <Tv className="w-4 h-4" />}
+                  {t === 'MOVIE' ? 'Filme' : 'Série'}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#4b5563' }} />
               <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && search()}
-                placeholder={placeholder}
-                className="flex-1 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none"
-                style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a' }}
+                placeholder={`Buscar ${type === 'MOVIE' ? 'filme' : 'série'}${mode === 'correcao' ? ' no catálogo' : ''}...`}
+                className="w-full rounded-xl pl-10 pr-20 py-3 text-sm text-white focus:outline-none"
+                style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}
               />
               <button
                 onClick={search}
                 disabled={loading || query.trim().length < 2}
-                className="px-4 py-2 rounded-lg text-white transition disabled:opacity-50"
-                style={{ backgroundColor: '#f97316' }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition disabled:opacity-40"
+                style={{ backgroundColor: '#E8500A' }}
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Buscar'}
               </button>
             </div>
-          </div>
-        </div>
 
-        {/* Feedback */}
-        {feedback && (
-          <div
-            className={`mt-3 p-3 rounded-lg text-center text-sm border ${feedbackError ? 'bg-red-900/40 border-red-500/50 text-red-400' : 'border-transparent text-green-400'}`}
-            style={feedbackError ? {} : { backgroundColor: '#1a3a1a' }}
-          >
-            {feedback}
-          </div>
-        )}
-
-        {/* Results */}
-        {results && (
-          <div className="mt-3 space-y-2">
-
-            {/* ── PEDIDO MODE ── */}
-            {mode === 'pedido' && (
-              <>
-                {results.local.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Disponível no catálogo</p>
-                    {results.local.map(item => {
-                      const alreadyRequested = requested.includes(item.tmdbId)
-                      const alreadyPending = pendingItems.includes(item.tmdbId)
-                      const showAltPanel = altAudioPanel === item.id
-                      const showTvPanel = tvPanel?.tmdbId === item.tmdbId
-                      const canRequestAlt = item.audioType !== 'DUBLADO_LEGENDADO'
-                      return (
-                        <div key={item.id} className="mb-2">
-                          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#151515' }}>
-                            <PosterBox posterUrl={item.posterUrl} title={item.title} />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm text-white">{item.title}</p>
-                              <p className="text-xs text-gray-400">{item.year}</p>
-                              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-                                {item.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
-                                {item.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
-                                {item.audioType === 'DUBLADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Dub</span>}
-                                {item.audioType === 'LEGENDADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Leg</span>}
-                                {item.audioType === 'DUBLADO_LEGENDADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#14532d40', color: '#4ade80' }}>Dub+Leg</span>}
-                              </div>
-                            </div>
-                            {alreadyPending && !alreadyRequested && item.type === 'MOVIE' && (
-                              <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#9ca3af' }}>
-                                <CheckCircle className="w-3 h-3" /> Já solicitado
-                              </span>
-                            )}
-                            {!alreadyRequested && !alreadyPending && canRequestAlt && (
-                              <button
-                                onClick={() => {
-                                  if (item.type === 'TV') {
-                                    setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.posterUrl, localId: item.id })
-                                    setAltAudioPanel(null)
-                                    setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes('')
-                                  } else {
-                                    setAltAudioPanel(showAltPanel ? null : item.id)
-                                    setTvPanel(null)
-                                  }
-                                }}
-                                className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0 transition"
-                                style={{ backgroundColor: (showAltPanel || showTvPanel) ? '#252525' : '#f9731620', color: '#f97316', border: '1px solid #f9731640' }}
-                              >
-                                {(showAltPanel || showTvPanel)
-                                  ? 'Cancelar'
-                                  : item.type === 'TV'
-                                    ? 'Solicitar atualização'
-                                    : item.audioType === 'DUBLADO'
-                                      ? 'Solicitar em Leg'
-                                      : 'Solicitar em Dub'}
-                              </button>
-                            )}
-                            {alreadyRequested && (
-                              <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#60a5fa' }}>
-                                <CheckCircle className="w-3 h-3" /> Solicitado
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Painel áudio alternativo — Filmes */}
-                          {showAltPanel && item.type === 'MOVIE' && (
-                            <div className="mt-1 rounded-xl p-4 space-y-3" style={{ backgroundColor: '#0f0f1a', border: '1px solid #1a1a3a' }}>
-                              <p className="text-sm text-white font-medium">
-                                {item.audioType === 'DUBLADO' ? '📝 Solicitar versão Legendada' : '🎙️ Solicitar versão Dublada'}
-                              </p>
-                              <p className="text-xs" style={{ color: '#9ca3af' }}>
-                                Uma observação será adicionada automaticamente ao pedido.
-                              </p>
-                              <div className="flex gap-2">
-                                <button onClick={() => setAltAudioPanel(null)} className="flex-1 py-2 rounded-lg text-sm transition" style={{ border: '1px solid #2a2a2a', color: '#9ca3af' }}>
-                                  Cancelar
-                                </button>
-                                <button onClick={() => sendAltAudio(item)} disabled={panelLoading} className="flex-1 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-50" style={{ backgroundColor: '#f97316' }}>
-                                  {panelLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Painel TV — local */}
-                          {showTvPanel && <TvRequestPanel isLocal onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} />}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {results.tmdb.length > 0 && (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Não encontrado no catálogo</p>
-                    {results.tmdb
-                      .filter(t => !results.local.some(l => l.tmdbId === t.tmdbId))
-                      .map(item => {
-                        const done = requested.includes(item.tmdbId)
-                        const showTvPanel = tvPanel?.tmdbId === item.tmdbId
-                        return (
-                          <div key={item.tmdbId} className="mb-2">
-                            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#151515' }}>
-                              <PosterBox posterUrl={item.poster} title={item.title} />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm text-white">{item.title}</p>
-                                <p className="text-xs text-gray-400">{item.year}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <XCircle className="w-3.5 h-3.5 text-red-400" />
-                                  <span className="text-xs text-red-400">Não disponível</span>
-                                </div>
-                              </div>
-                              {done
-                                ? <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#60a5fa' }}><CheckCircle className="w-3 h-3" /> Solicitado</span>
-                                : type === 'TV'
-                                  ? <button
-                                      onClick={() => {
-                                        setTvPanel(showTvPanel ? null : { tmdbId: item.tmdbId, title: item.title, posterUrl: item.poster })
-                                        setAltAudioPanel(null)
-                                        setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes('')
-                                      }}
-                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0 transition"
-                                      style={{ backgroundColor: showTvPanel ? '#252525' : '#f97316' }}
-                                    >
-                                      {showTvPanel ? 'Cancelar' : <><Send className="w-3 h-3" /> Solicitar</>}
-                                    </button>
-                                  : <button onClick={() => sendRequest(item)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white flex-shrink-0" style={{ backgroundColor: '#f97316' }}>
-                                      <Send className="w-3 h-3" /> Solicitar
-                                    </button>
-                              }
-                            </div>
-                            {showTvPanel && <TvRequestPanel onCancel={closePanels} onConfirm={sendTvRequest} tvMode={tvMode} setTvMode={setTvMode} tvSubSeasons={tvSubSeasons} setTvSubSeasons={setTvSubSeasons} tvSubEpisodes={tvSubEpisodes} setTvSubEpisodes={setTvSubEpisodes} panelLoading={panelLoading} buildTvNote={buildTvNote} isLocal={false} />}
-                          </div>
-                        )
-                      })}
-                  </div>
-                )}
-
-                {results.local.length === 0 && results.tmdb.length === 0 && (
-                  <div className="text-center text-gray-400 py-8 rounded-xl" style={{ backgroundColor: '#151515' }}>
-                    <XCircle className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                    <p>Nenhum resultado encontrado</p>
-                  </div>
-                )}
-              </>
+            {/* Feedback */}
+            {feedback && (
+              <div
+                className="mb-4 p-3 rounded-xl text-sm text-center"
+                style={feedbackError
+                  ? { backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }
+                  : { backgroundColor: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)', color: '#4ade80' }
+                }
+              >
+                {feedback}
+              </div>
             )}
 
-            {/* ── CORREÇÃO MODE ── */}
-            {mode === 'correcao' && (
-              <>
-                {results.local.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8 rounded-xl" style={{ backgroundColor: '#151515' }}>
-                    <XCircle className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                    <p className="text-sm">Título não encontrado no catálogo</p>
-                    <p className="text-xs text-gray-600 mt-1">Correções só podem ser feitas em títulos disponíveis.</p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 px-1">Selecione o título com problema</p>
-                    {results.local.map(item => (
-                      <div key={item.id} className="mb-2">
-                        {reported.includes(item.tmdbId) ? (
-                          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#151515', opacity: 0.6 }}>
-                            <PosterBox posterUrl={item.posterUrl} title={item.title} />
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm text-white">{item.title}</p>
-                              <p className="text-xs text-gray-400">{item.year}</p>
-                            </div>
-                            <span className="text-xs text-green-400 flex items-center gap-1 flex-shrink-0">
-                              <CheckCircle className="w-3.5 h-3.5" /> Enviado
-                            </span>
-                          </div>
-                        ) : (
-                          <>
+            {/* Results */}
+            {results && (
+              <div className="space-y-5">
+
+                {/* PEDIDO mode */}
+                {mode === 'pedido' && (
+                  <>
+                    {results.local.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#4b5563' }}>
+                          Disponível no catálogo
+                        </p>
+                        <div className="space-y-2">
+                          {results.local.map(item => {
+                            const alreadyRequested = requested.includes(item.tmdbId)
+                            const alreadyPending = pendingItems.includes(item.tmdbId) && item.type === 'MOVIE'
+                            const canRequestAlt = item.audioType !== 'DUBLADO_LEGENDADO'
+                            const canSelect = !alreadyRequested && !alreadyPending && canRequestAlt
+                            const isSelected = selectedLocal?.id === item.id
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => canSelect && handleSelectLocal(item)}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
+                                style={{
+                                  backgroundColor: isSelected ? '#1e1a18' : '#181818',
+                                  border: isSelected ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                                  opacity: !canSelect ? 0.55 : 1,
+                                  cursor: canSelect ? 'pointer' : 'default',
+                                }}
+                              >
+                                <PosterThumb posterUrl={item.posterUrl} title={item.title} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm text-white truncate">{item.title}</p>
+                                  <p className="text-xs mb-1.5" style={{ color: '#6b7280' }}>{item.year}</p>
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                                    {item.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
+                                    {item.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
+                                    <AudioBadge audioType={item.audioType} />
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 text-right text-xs">
+                                  {alreadyRequested && <span style={{ color: '#60a5fa' }} className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Solicitado</span>}
+                                  {!alreadyRequested && alreadyPending && <span style={{ color: '#9ca3af' }}>Já solicitado</span>}
+                                  {!alreadyRequested && !alreadyPending && !canRequestAlt && <span style={{ color: '#9ca3af' }}>Dub+Leg ✓</span>}
+                                  {canSelect && <span style={{ color: isSelected ? '#E8500A' : '#4b5563' }}>{isSelected ? '● Selecionado' : 'Selecionar →'}</span>}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {results.tmdb.filter(t => !results.local.some(l => l.tmdbId === t.tmdbId)).length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#4b5563' }}>
+                          Não encontrado no catálogo
+                        </p>
+                        <div className="space-y-2">
+                          {results.tmdb
+                            .filter(t => !results.local.some(l => l.tmdbId === t.tmdbId))
+                            .map(item => {
+                              const done = requested.includes(item.tmdbId)
+                              const isSelected = selectedTmdb?.tmdbId === item.tmdbId
+                              return (
+                                <button
+                                  key={item.tmdbId}
+                                  onClick={() => !done && handleSelectTmdb(item)}
+                                  className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
+                                  style={{
+                                    backgroundColor: isSelected ? '#1e1a18' : '#181818',
+                                    border: isSelected ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                                    opacity: done ? 0.55 : 1,
+                                    cursor: done ? 'default' : 'pointer',
+                                  }}
+                                >
+                                  <PosterThumb posterUrl={item.poster} title={item.title} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-sm text-white truncate">{item.title}</p>
+                                    <p className="text-xs mb-1.5" style={{ color: '#6b7280' }}>{item.year}</p>
+                                    <div className="flex items-center gap-1">
+                                      <XCircle className="w-3 h-3 text-red-400" />
+                                      <span className="text-xs text-red-400">Não disponível</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-shrink-0 text-right text-xs">
+                                    {done
+                                      ? <span style={{ color: '#60a5fa' }} className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Solicitado</span>
+                                      : <span style={{ color: isSelected ? '#E8500A' : '#4b5563' }}>{isSelected ? '● Selecionado' : 'Selecionar →'}</span>
+                                    }
+                                  </div>
+                                </button>
+                              )
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {results.local.length === 0 && results.tmdb.length === 0 && (
+                      <div className="text-center py-12 rounded-xl" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <XCircle className="w-8 h-8 mx-auto mb-2 text-gray-600" />
+                        <p className="text-sm text-gray-400">Nenhum resultado encontrado</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* CORREÇÃO mode */}
+                {mode === 'correcao' && (
+                  results.local.length === 0 ? (
+                    <div className="text-center py-12 rounded-xl" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <XCircle className="w-8 h-8 mx-auto mb-2 text-gray-600" />
+                      <p className="text-sm text-gray-400">Título não encontrado no catálogo</p>
+                      <p className="text-xs mt-1" style={{ color: '#374151' }}>Correções só podem ser feitas em títulos disponíveis.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style={{ color: '#4b5563' }}>
+                        Selecione o título com problema
+                      </p>
+                      <div className="space-y-2">
+                        {results.local.map(item => {
+                          const done = reported.includes(item.tmdbId)
+                          const isSelected = selectedLocal?.id === item.id
+                          return (
                             <button
-                              onClick={() => setCorrectingId(correctingId === item.tmdbId ? null : item.tmdbId)}
-                              className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition"
+                              key={item.id}
+                              onClick={() => !done && handleSelectLocal(item)}
+                              className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
                               style={{
-                                backgroundColor: correctingId === item.tmdbId ? '#1a1010' : '#151515',
-                                border: correctingId === item.tmdbId ? '1px solid #3a1a1a' : '1px solid transparent',
+                                backgroundColor: isSelected ? '#1a1010' : '#181818',
+                                border: isSelected ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.07)',
+                                opacity: done ? 0.55 : 1,
+                                cursor: done ? 'default' : 'pointer',
                               }}
                             >
-                              <PosterBox posterUrl={item.posterUrl} title={item.title} />
+                              <PosterThumb posterUrl={item.posterUrl} title={item.title} />
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm text-white">{item.title}</p>
-                                <p className="text-xs text-gray-400">{item.year}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                                <p className="font-semibold text-sm text-white truncate">{item.title}</p>
+                                <p className="text-xs mb-1.5" style={{ color: '#6b7280' }}>{item.year}</p>
+                                <div className="flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3 text-green-400" />
                                   <span className="text-xs text-green-400">No catálogo · {item.server}</span>
                                 </div>
                               </div>
-                              <span className="text-xs text-red-400 flex-shrink-0 font-medium">
-                                {correctingId === item.tmdbId ? 'Cancelar' : 'Reportar'}
+                              <span className="text-xs flex-shrink-0 font-medium" style={{ color: done ? '#4ade80' : isSelected ? '#ef4444' : '#4b5563' }}>
+                                {done ? '✓ Enviado' : isSelected ? '● Selecionado' : 'Reportar →'}
                               </span>
                             </button>
-
-                            {correctingId === item.tmdbId && (
-                              <CorrectForm
-                                item={item}
-                                type={type}
-                                onCancel={() => setCorrectingId(null)}
-                                onSent={() => {
-                                  setReported(prev => [...prev, item.tmdbId])
-                                  setCorrectingId(null)
-                                  setFeedbackError(false)
-                                  setFeedback('Report enviado! Nossa equipe irá verificar.')
-                                }}
-                              />
-                            )}
-                          </>
-                        )}
+                          )
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )
                 )}
-              </>
+              </div>
             )}
           </div>
-        )}
 
+          {/* RIGHT: sticky panel */}
+          <div className="w-full lg:w-80 xl:w-96 lg:sticky lg:top-6 flex-shrink-0">
+            <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
+
+              {!hasSelection ? (
+                /* Empty state */
+                <div className="p-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: '#4b5563' }}>
+                    {mode === 'pedido' ? 'Selecione um título para solicitar' : 'Selecione um título para reportar'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    <div className="rounded-xl p-4" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <p className="text-2xl font-bold text-white">{stats?.pendingThisMonth ?? '—'}</p>
+                      <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Pedidos abertos este mês</p>
+                    </div>
+                    <div className="rounded-xl p-4" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <p className="text-2xl font-bold" style={{ color: '#4ade80' }}>{stats?.totalCompleted ?? '—'}</p>
+                      <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Total concluído</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-center" style={{ color: '#374151' }}>
+                    ← Busque e selecione um título
+                  </p>
+                </div>
+              ) : isCorrection && selectedLocal ? (
+                /* Correction form */
+                <div className="p-5">
+                  <div className="flex items-center gap-3 mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <PosterThumb posterUrl={selectedLocal.posterUrl} title={selectedLocal.title} />
+                    <div>
+                      <p className="font-semibold text-sm text-white">{selectedLocal.title}</p>
+                      <p className="text-xs" style={{ color: '#6b7280' }}>{selectedLocal.year}</p>
+                    </div>
+                  </div>
+                  <CorrectForm
+                    item={selectedLocal}
+                    type={type}
+                    onCancel={clearSelection}
+                    onSent={() => {
+                      setReported(prev => [...prev, selectedLocal.tmdbId])
+                      clearSelection()
+                      setFeedbackError(false)
+                      setFeedback('Report enviado! Nossa equipe irá verificar.')
+                    }}
+                  />
+                </div>
+              ) : (
+                /* Pedido detail panel */
+                <>
+                  {/* Poster header */}
+                  <div className="flex gap-4 p-5" style={{ backgroundColor: '#111111', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    {selectedPoster
+                      ? <img src={selectedPoster} alt={selectedTitle} className="rounded-lg object-cover flex-shrink-0" style={{ width: '80px', height: '120px' }} />
+                      : <div className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: '80px', height: '120px', backgroundColor: '#222222' }}>
+                          <Film className="w-8 h-8 text-gray-600" />
+                        </div>
+                    }
+                    <div className="flex-1 min-w-0 pt-1">
+                      <p className="font-bold text-white leading-tight mb-1">{selectedTitle}</p>
+                      <p className="text-sm mb-2" style={{ color: '#6b7280' }}>{selectedYear}</p>
+                      {selectedLocal && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedLocal.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
+                          {selectedLocal.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
+                          <AudioBadge audioType={selectedLocal.audioType} />
+                        </div>
+                      )}
+                      {selectedTmdb && (
+                        <div className="flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-red-400" />
+                          <span className="text-xs text-red-400">Não disponível</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+                    {/* TV: type options */}
+                    {isTV && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#4b5563' }}>
+                          Tipo de pedido
+                        </p>
+                        <div className="space-y-2">
+                          {availableTvOptions.map(opt => (
+                            <button
+                              key={opt.value}
+                              onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes('') }}
+                              className="w-full flex flex-col p-3 rounded-xl text-left transition-all"
+                              style={{
+                                backgroundColor: tvMode === opt.value ? '#1f1a0f' : '#111111',
+                                border: tvMode === opt.value ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                              }}
+                            >
+                              <span className="text-sm font-semibold text-white">{opt.label}</span>
+                              <span className="text-xs" style={{ color: '#6b7280' }}>{opt.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {tvMode === 'substitution' && (
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <div>
+                              <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Temporada(s)</p>
+                              <input
+                                value={tvSubSeasons}
+                                onChange={e => setTvSubSeasons(e.target.value)}
+                                placeholder="Ex: T2"
+                                className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                                style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Episódio(s)</p>
+                              <input
+                                value={tvSubEpisodes}
+                                onChange={e => setTvSubEpisodes(e.target.value)}
+                                placeholder="Ex: Ep 1 ao 10"
+                                className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                                style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {tvNote && (
+                          <p className="text-xs rounded-lg px-3 py-2 mt-2" style={{ backgroundColor: '#111827', color: '#93c5fd' }}>
+                            {tvNote}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* MOVIE local: what will be requested */}
+                    {!isTV && selectedLocal && (
+                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
+                        <p className="text-sm font-medium text-white">
+                          {selectedLocal.audioType === 'DUBLADO' ? '📝 Versão Legendada' : '🎙️ Versão Dublada'}
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
+                          Uma observação será adicionada automaticamente ao pedido.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* MOVIE tmdb */}
+                    {!isTV && selectedTmdb && (
+                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
+                        <p className="text-sm font-medium text-white">Adicionar ao catálogo</p>
+                        <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Pedido de inclusão de novo título.</p>
+                      </div>
+                    )}
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <p className="text-xl font-bold text-white">{stats?.pendingThisMonth ?? '—'}</p>
+                        <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Abertos este mês</p>
+                      </div>
+                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        <p className="text-xl font-bold" style={{ color: '#4ade80' }}>{stats?.totalCompleted ?? '—'}</p>
+                        <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Total concluído</p>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={clearSelection}
+                        className="py-2.5 px-4 rounded-xl text-sm transition"
+                        style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#9ca3af' }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleConfirm}
+                        disabled={panelLoading}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
+                        style={{ backgroundColor: '#E8500A' }}
+                      >
+                        {panelLoading
+                          ? <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                          : 'Confirmar Solicitação'
+                        }
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   )
