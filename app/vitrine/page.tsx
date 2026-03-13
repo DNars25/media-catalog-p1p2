@@ -562,7 +562,7 @@ export default function VitrinePage() {
                                 {item.audioType === 'DUBLADO_LEGENDADO' && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#14532d40', color: '#4ade80' }}>Dub+Leg</span>}
                               </div>
                             </div>
-                            {alreadyPending && !alreadyRequested && (
+                            {alreadyPending && !alreadyRequested && item.type === 'MOVIE' && (
                               <span className="text-xs flex items-center gap-1 flex-shrink-0" style={{ color: '#9ca3af' }}>
                                 <CheckCircle className="w-3 h-3" /> Já solicitado
                               </span>

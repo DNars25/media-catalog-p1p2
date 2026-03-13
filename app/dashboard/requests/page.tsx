@@ -25,6 +25,7 @@ interface Request {
   createdBy: { name: string }
   completedBy: { name: string } | null
   linkedTitle: { id: string; title: string } | null
+  requestCount?: number
 }
 
 interface TMDBResult {
@@ -462,6 +463,7 @@ export default function RequestsPage() {
       ...(filterStatus && { status: filterStatus }),
       ...(filterType && { type: filterType }),
       ...(filterPriority && { priority: 'true' }),
+      ...(filterType === 'MOVIE' && { sort: 'count' }),
     })
     const res = await fetch('/api/requests?' + params + '&isUpdate=false')
     const data = await res.json()
@@ -658,6 +660,11 @@ export default function RequestsPage() {
                           <div className="flex items-center gap-1.5">
                             {r.priority && <span title="Alta Prioridade"><Flame className="w-3.5 h-3.5 text-red-400 shrink-0" /></span>}
                             <p className="font-medium text-sm">{r.requestedTitle}</p>
+                            {r.type === 'MOVIE' && (r.requestCount ?? 0) > 1 && (
+                              <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-orange-500/20 text-orange-400 shrink-0">
+                                {r.requestCount}×
+                              </span>
+                            )}
                           </div>
                           {r.linkedTitle && <p className="text-xs text-primary mt-0.5">→ {r.linkedTitle.title}</p>}
                           {r.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.notes}</p>}
