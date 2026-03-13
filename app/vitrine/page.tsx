@@ -723,13 +723,28 @@ export default function VitrinePage() {
                     <div className="flex-1 min-w-0 pt-1">
                       <p className="font-bold text-white leading-tight mb-1">{selectedTitle}</p>
                       <p className="text-sm mb-2" style={{ color: '#6b7280' }}>{selectedYear}</p>
-                      {selectedLocal && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedLocal.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
-                          {selectedLocal.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
-                          <AudioBadge audioType={selectedLocal.audioType} />
-                        </div>
-                      )}
+                      {selectedLocal && (() => {
+                        const servers = [selectedLocal.hasP1 && 'B2P', selectedLocal.hasP2 && 'P2B'].filter(Boolean) as string[]
+                        const serversLabel = servers.length === 2 ? 'B2P e P2B' : servers.length === 1 ? `Apenas ${servers[0]}` : '—'
+                        const audioLabel = selectedLocal.audioType === 'DUBLADO' ? 'Dublado' : selectedLocal.audioType === 'LEGENDADO' ? 'Legendado' : selectedLocal.audioType === 'DUBLADO_LEGENDADO' ? 'Dublado + Legendado' : null
+                        return (
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap gap-1.5 mb-1">
+                              {selectedLocal.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
+                              {selectedLocal.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
+                              <AudioBadge audioType={selectedLocal.audioType} />
+                            </div>
+                            <p className="text-xs" style={{ color: '#6b7280' }}>
+                              <span style={{ color: '#4b5563' }}>Disponível em:</span> <span className="text-white">✓ {serversLabel}</span>
+                            </p>
+                            {audioLabel && (
+                              <p className="text-xs" style={{ color: '#6b7280' }}>
+                                <span style={{ color: '#4b5563' }}>Versão atual:</span> <span className="text-white">✓ {audioLabel}</span>
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })()}
                       {selectedTmdb && (
                         <div className="flex items-center gap-1">
                           <XCircle className="w-3 h-3 text-red-400" />
