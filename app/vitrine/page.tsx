@@ -354,6 +354,7 @@ export default function VitrinePage() {
         body: JSON.stringify({
           title: item.title, type, posterUrl: item.posterUrl, tmdbId: item.tmdbId,
           notes: `Solicitação de versão ${version} — título já existente no catálogo.`,
+          linkedTitleId: item.id,
         }),
       })
       if (res.ok) {

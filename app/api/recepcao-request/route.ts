@@ -19,10 +19,10 @@ export async function POST(req: NextRequest) {
 
     const { title, type, posterUrl, tmdbId, notes, isUpdate, linkedTitleId } = parsed.data
 
-    // Prevent duplicate open requests — only for movies
-    if (type === 'MOVIE' && tmdbId) {
+    // Prevent duplicate open requests — only for movies already in the catalog (have linkedTitleId)
+    if (type === 'MOVIE' && linkedTitleId) {
       const existing = await prisma.request.findFirst({
-        where: { tmdbId, type, source: 'VITRINE', status: { not: 'CONCLUIDO' } },
+        where: { linkedTitleId, source: 'VITRINE', status: { not: 'CONCLUIDO' } },
         select: { id: true },
       })
       if (existing) return NextResponse.json({ error: 'Já existe um pedido em aberto para este título.' }, { status: 409 })
@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ ok: true, id: request.id })
-  } catch {
+  } catch (e) {
+    console.log('[recepcao-request] erro:', e)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

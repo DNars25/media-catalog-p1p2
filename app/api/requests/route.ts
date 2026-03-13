@@ -42,33 +42,36 @@ export async function GET(req: NextRequest) {
 
   const sort = sp.get('sort') || 'recent'
 
-  // Count-sorted path for MOVIE type (raw SQL with window-style CTE)
-  if (type === 'MOVIE' && sort === 'count' && !search) {
+  // Count-sorted path — orders by number of requests per linkedTitleId (raw SQL)
+  if (sort === 'count' && !search) {
     const statusParam = status || null
+    const typeParam = type || null
     const isUpdateBool = isUpdate === 'false' ? false : isUpdate === 'true' ? true : null
     const priorityBool = priority === 'true' ? true : null
 
     const [countRows, idRows] = await Promise.all([
       prisma.$queryRaw<[{ n: bigint }]>`
         SELECT COUNT(*)::bigint AS n FROM "Request"
-        WHERE "isCorrection" = false AND type = 'MOVIE'
+        WHERE "isCorrection" = false
           AND (${statusParam}::text IS NULL OR status::text = ${statusParam})
+          AND (${typeParam}::text IS NULL OR type::text = ${typeParam})
           AND (${isUpdateBool}::boolean IS NULL OR "isUpdate" = ${isUpdateBool})
           AND (${priorityBool}::boolean IS NULL OR priority = ${priorityBool})
       `,
       prisma.$queryRaw<{ id: string; cnt: number }[]>`
-        WITH movie_counts AS (
-          SELECT "tmdbId", COUNT(*)::int AS cnt FROM "Request"
-          WHERE type = 'MOVIE' AND "isCorrection" = false AND status != 'CONCLUIDO' AND "tmdbId" IS NOT NULL
-          GROUP BY "tmdbId"
+        WITH linked_counts AS (
+          SELECT "linkedTitleId", COUNT(*)::int AS cnt FROM "Request"
+          WHERE "linkedTitleId" IS NOT NULL AND "isCorrection" = false AND status != 'CONCLUIDO'
+          GROUP BY "linkedTitleId"
         )
-        SELECT r.id, COALESCE(mc.cnt, 1)::int AS cnt FROM "Request" r
-        LEFT JOIN movie_counts mc ON mc."tmdbId" = r."tmdbId"
-        WHERE r."isCorrection" = false AND r.type = 'MOVIE'
+        SELECT r.id, COALESCE(lc.cnt, 1)::int AS cnt FROM "Request" r
+        LEFT JOIN linked_counts lc ON lc."linkedTitleId" = r."linkedTitleId"
+        WHERE r."isCorrection" = false
           AND (${statusParam}::text IS NULL OR r.status::text = ${statusParam})
+          AND (${typeParam}::text IS NULL OR r.type::text = ${typeParam})
           AND (${isUpdateBool}::boolean IS NULL OR r."isUpdate" = ${isUpdateBool})
           AND (${priorityBool}::boolean IS NULL OR r.priority = ${priorityBool})
-        ORDER BY r.priority DESC, COALESCE(mc.cnt, 1) DESC, r."createdAt" DESC
+        ORDER BY r.priority DESC, COALESCE(lc.cnt, 1) DESC, r."createdAt" DESC
         LIMIT ${limit} OFFSET ${skip}
       `,
     ])
@@ -109,22 +112,20 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  // Annotate movie requests with request count per tmdbId
-  let requestCountMap: Record<number, number> = {}
-  if (type === 'MOVIE') {
-    const counts = await prisma.request.groupBy({
-      by: ['tmdbId'],
-      where: { type: 'MOVIE', isCorrection: false, status: { not: 'CONCLUIDO' as RequestStatus }, tmdbId: { not: null } },
-      _count: { id: true },
-    })
-    requestCountMap = Object.fromEntries(
-      counts.filter(c => c.tmdbId != null).map(c => [c.tmdbId!, c._count.id])
-    )
-  }
+  // Annotate with count per linkedTitleId (for search path)
+  const linkedCounts = await prisma.request.groupBy({
+    by: ['linkedTitleId'],
+    where: { linkedTitleId: { not: null }, isCorrection: false, status: { not: 'CONCLUIDO' as RequestStatus } },
+    _count: { id: true },
+  })
+  const linkedCountMap: Record<string, number> = Object.fromEntries(
+    linkedCounts.filter(c => c.linkedTitleId).map(c => [c.linkedTitleId!, c._count.id])
+  )
 
-  const enriched = type === 'MOVIE'
-    ? requests.map(r => ({ ...r, requestCount: r.tmdbId != null ? (requestCountMap[r.tmdbId] ?? 1) : 1 }))
-    : requests
+  const enriched = requests.map(r => ({
+    ...r,
+    requestCount: r.linkedTitleId ? (linkedCountMap[r.linkedTitleId] ?? 1) : 1,
+  }))
 
   return NextResponse.json({ requests: enriched, total, page, limit, pages: Math.ceil(total / limit) })
 }
