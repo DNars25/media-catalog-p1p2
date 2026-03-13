@@ -397,7 +397,7 @@ export default function VitrinePage() {
       />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 16px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 16px' }}>
 
         {/* Logo */}
         <div className="flex justify-center pt-6 pb-4">
@@ -441,10 +441,10 @@ export default function VitrinePage() {
         </div>
 
         {/* Two-column layout */}
-        <div className="mb-10 flex flex-col md:flex-row gap-4 items-start">
+        <div className="mb-10 grid grid-cols-1 md:grid-cols-[1fr_300px] gap-4 items-start">
 
           {/* LEFT: search + results */}
-          <div className="w-full lg:flex-1 min-w-0">
+          <div className="min-w-0">
 
             {/* Type toggle */}
             <div className="flex gap-3 mb-4">
@@ -673,7 +673,7 @@ export default function VitrinePage() {
           </div>
 
           {/* RIGHT: sticky panel — desktop only */}
-          <div className="hidden md:block md:sticky md:top-6 flex-shrink-0" style={{ width: '320px' }}>
+          <div className="hidden md:block md:sticky md:top-6">
             <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
 
               {!hasSelection ? (
