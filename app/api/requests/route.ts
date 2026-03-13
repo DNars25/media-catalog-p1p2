@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/rbac'
 import { findRequestIdsByText } from '@/lib/search'
 import { RequestCreateSchema } from '@/lib/validators'
-import { Prisma, RequestStatus } from '@prisma/client'
+import { Prisma, RequestStatus } from '@prisma/client' // Prisma used for where types; RequestStatus for casts
 import { logAudit } from '@/lib/audit'
 import { sendRequestCreated } from '@/lib/email'
 
@@ -40,68 +40,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const sort = sp.get('sort') || 'recent'
-
-  // Count-sorted path — orders by number of requests per linkedTitleId (raw SQL)
-  if (sort === 'count' && !search) {
-    const statusParam = status || null
-    const typeParam = type || null
-    const isUpdateBool = isUpdate === 'false' ? false : isUpdate === 'true' ? true : null
-    const priorityBool = priority === 'true' ? true : null
-
-    const [countRows, idRows] = await Promise.all([
-      prisma.$queryRaw<[{ n: bigint }]>`
-        SELECT COUNT(*)::bigint AS n FROM "Request"
-        WHERE "isCorrection" = false
-          AND (${statusParam}::text IS NULL OR status::text = ${statusParam})
-          AND (${typeParam}::text IS NULL OR type::text = ${typeParam})
-          AND (${isUpdateBool}::boolean IS NULL OR "isUpdate" = ${isUpdateBool})
-          AND (${priorityBool}::boolean IS NULL OR priority = ${priorityBool})
-      `,
-      prisma.$queryRaw<{ id: string; cnt: number }[]>`
-        WITH linked_counts AS (
-          SELECT "linkedTitleId", COUNT(*)::int AS cnt FROM "Request"
-          WHERE "linkedTitleId" IS NOT NULL AND "isCorrection" = false AND status != 'CONCLUIDO'
-          GROUP BY "linkedTitleId"
-        )
-        SELECT r.id, COALESCE(lc.cnt, 1)::int AS cnt FROM "Request" r
-        LEFT JOIN linked_counts lc ON lc."linkedTitleId" = r."linkedTitleId"
-        WHERE r."isCorrection" = false
-          AND (${statusParam}::text IS NULL OR r.status::text = ${statusParam})
-          AND (${typeParam}::text IS NULL OR r.type::text = ${typeParam})
-          AND (${isUpdateBool}::boolean IS NULL OR r."isUpdate" = ${isUpdateBool})
-          AND (${priorityBool}::boolean IS NULL OR r.priority = ${priorityBool})
-        ORDER BY r.priority DESC, COALESCE(lc.cnt, 1) DESC, r."createdAt" DESC
-        LIMIT ${limit} OFFSET ${skip}
-      `,
-    ])
-
-    const total = Number(countRows[0].n)
-    const idOrder = idRows.map(r => r.id)
-    const countById: Record<string, number> = Object.fromEntries(idRows.map(r => [r.id, r.cnt]))
-
-    const fullRequests = await prisma.request.findMany({
-      where: { id: { in: idOrder } },
-      include: {
-        createdBy: { select: { name: true, email: true } },
-        linkedTitle: { select: { id: true, title: true } },
-        completedBy: { select: { name: true } },
-      },
-    })
-
-    const enrichedRequests = idOrder
-      .map(id => fullRequests.find(r => r.id === id))
-      .filter((r): r is NonNullable<typeof r> => r != null)
-      .map(r => ({ ...r, requestCount: countById[r.id] }))
-
-    return NextResponse.json({ requests: enrichedRequests, total, page, limit, pages: Math.ceil(total / limit) })
-  }
-
   const [total, requests] = await Promise.all([
     prisma.request.count({ where }),
     prisma.request.findMany({
       where,
-      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+      orderBy: [{ priority: 'desc' }, { requestCount: 'desc' }, { createdAt: 'desc' }],
       skip,
       take: limit,
       include: {
@@ -112,22 +55,7 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  // Annotate with count per linkedTitleId (for search path)
-  const linkedCounts = await prisma.request.groupBy({
-    by: ['linkedTitleId'],
-    where: { linkedTitleId: { not: null }, isCorrection: false, status: { not: 'CONCLUIDO' as RequestStatus } },
-    _count: { id: true },
-  })
-  const linkedCountMap: Record<string, number> = Object.fromEntries(
-    linkedCounts.filter(c => c.linkedTitleId).map(c => [c.linkedTitleId!, c._count.id])
-  )
-
-  const enriched = requests.map(r => ({
-    ...r,
-    requestCount: r.linkedTitleId ? (linkedCountMap[r.linkedTitleId] ?? 1) : 1,
-  }))
-
-  return NextResponse.json({ requests: enriched, total, page, limit, pages: Math.ceil(total / limit) })
+  return NextResponse.json({ requests, total, page, limit, pages: Math.ceil(total / limit) })
 }
 
 export async function POST(req: NextRequest) {

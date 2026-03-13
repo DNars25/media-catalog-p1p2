@@ -19,13 +19,16 @@ export async function POST(req: NextRequest) {
 
     const { title, type, posterUrl, tmdbId, notes, isUpdate, linkedTitleId } = parsed.data
 
-    // Prevent duplicate open requests — only for movies already in the catalog (have linkedTitleId)
-    if (type === 'MOVIE' && linkedTitleId) {
-      const existing = await prisma.request.findFirst({
-        where: { linkedTitleId, source: 'VITRINE', status: { not: 'CONCLUIDO' } },
-        select: { id: true },
-      })
-      if (existing) return NextResponse.json({ error: 'Já existe um pedido em aberto para este título.' }, { status: 409 })
+    // For movies: increment requestCount on existing open request instead of creating a duplicate
+    if (type === 'MOVIE' && tmdbId) {
+      const dupWhere = linkedTitleId
+        ? { linkedTitleId, source: 'VITRINE' as const, status: { not: 'CONCLUIDO' as const } }
+        : { tmdbId, source: 'VITRINE' as const, status: { not: 'CONCLUIDO' as const } }
+      const existing = await prisma.request.findFirst({ where: dupWhere, select: { id: true } })
+      if (existing) {
+        await prisma.request.update({ where: { id: existing.id }, data: { requestCount: { increment: 1 } } })
+        return NextResponse.json({ ok: true })
+      }
     }
 
     const systemUserId = await getSystemUserId()

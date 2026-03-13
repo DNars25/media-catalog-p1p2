@@ -131,6 +131,7 @@ model Request {
   linkedTitle      Title?          @relation(fields: [linkedTitleId], references: [id])
   source           RequestSource   @default(ADMIN)
   priority         Boolean         @default(false)
+  requestCount     Int             @default(1)
   completedById    String?
   completedBy      User?           @relation("completedRequests", fields: [completedById], references: [id])
   createdAt        DateTime        @default(now())
