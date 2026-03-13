@@ -19,15 +19,19 @@ export async function POST(req: NextRequest) {
 
     const { title, type, posterUrl, tmdbId, notes, isUpdate, linkedTitleId } = parsed.data
 
-    // For movies: increment requestCount on existing open request instead of creating a duplicate
-    if (type === 'MOVIE' && tmdbId) {
-      const dupWhere = linkedTitleId
-        ? { linkedTitleId, source: 'VITRINE' as const, status: { not: 'CONCLUIDO' as const } }
-        : { tmdbId, source: 'VITRINE' as const, status: { not: 'CONCLUIDO' as const } }
-      const existing = await prisma.request.findFirst({ where: dupWhere, select: { id: true } })
+    // Deduplication: any type — if a pending request with same tmdbId exists, just increment requestCount
+    if (tmdbId) {
+      const existing = await prisma.request.findFirst({
+        where: { tmdbId, source: 'VITRINE', status: { not: 'CONCLUIDO' } },
+        select: { id: true },
+      })
       if (existing) {
-        await prisma.request.update({ where: { id: existing.id }, data: { requestCount: { increment: 1 } } })
-        return NextResponse.json({ ok: true })
+        const updated = await prisma.request.update({
+          where: { id: existing.id },
+          data: { requestCount: { increment: 1 } },
+          select: { requestCount: true },
+        })
+        return NextResponse.json({ ok: true, requestCount: updated.requestCount })
       }
     }
 
@@ -65,7 +69,7 @@ export async function POST(req: NextRequest) {
       type,
     })
 
-    return NextResponse.json({ ok: true, id: request.id })
+    return NextResponse.json({ ok: true, id: request.id, requestCount: 1 })
   } catch (e) {
     console.log('[recepcao-request] erro:', e)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

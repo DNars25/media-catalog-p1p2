@@ -209,10 +209,10 @@ export default function VitrinePage() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<{ local: LocalItem[]; tmdb: TmdbItem[] } | null>(null)
   const [requested, setRequested] = useState<number[]>([])
+  const [requestCounts, setRequestCounts] = useState<Record<number, number>>({})
   const [reported, setReported] = useState<number[]>([])
   const [feedback, setFeedback] = useState('')
   const [feedbackError, setFeedbackError] = useState(false)
-  const [pendingItems, setPendingItems] = useState<number[]>([])
   const [selectedLocal, setSelectedLocal] = useState<LocalItem | null>(null)
   const [selectedTmdb, setSelectedTmdb] = useState<TmdbItem | null>(null)
   const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
@@ -266,15 +266,12 @@ export default function VitrinePage() {
         }),
       })
       if (res.ok) {
+        const data = await res.json()
         setRequested(prev => [...prev, item.tmdbId])
+        setRequestCounts(prev => ({ ...prev, [item.tmdbId]: data.requestCount ?? 1 }))
         clearSelection()
         setFeedbackError(false)
         setFeedback('Pedido enviado com sucesso!')
-      } else if (res.status === 409) {
-        setPendingItems(prev => [...prev, item.tmdbId])
-        clearSelection()
-        setFeedbackError(true)
-        setFeedback('Já existe um pedido em aberto para este título.')
       } else {
         setFeedbackError(true)
         setFeedback('Erro ao enviar pedido. Tente novamente.')
@@ -303,15 +300,12 @@ export default function VitrinePage() {
         }),
       })
       if (res.ok) {
+        const data = await res.json()
         setRequested(prev => [...prev, item.tmdbId])
+        setRequestCounts(prev => ({ ...prev, [item.tmdbId]: data.requestCount ?? 1 }))
         clearSelection()
         setFeedbackError(false)
         setFeedback('Pedido enviado com sucesso!')
-      } else if (res.status === 409) {
-        setPendingItems(prev => [...prev, item.tmdbId])
-        clearSelection()
-        setFeedbackError(true)
-        setFeedback('Já existe um pedido em aberto para este título.')
       } else {
         setFeedbackError(true)
         setFeedback('Erro ao enviar pedido. Tente novamente.')
@@ -328,7 +322,9 @@ export default function VitrinePage() {
       body: JSON.stringify({ title: item.title, type, posterUrl: item.poster, tmdbId: item.tmdbId }),
     })
     if (res.ok) {
+      const data = await res.json()
       setRequested(prev => [...prev, item.tmdbId])
+      setRequestCounts(prev => ({ ...prev, [item.tmdbId]: data.requestCount ?? 1 }))
       clearSelection()
       setFeedbackError(false)
       setFeedback('Pedido enviado com sucesso!')
@@ -526,9 +522,8 @@ export default function VitrinePage() {
                         <div className="space-y-2">
                           {results.local.map(item => {
                             const alreadyRequested = requested.includes(item.tmdbId)
-                            const alreadyPending = pendingItems.includes(item.tmdbId) && item.type === 'MOVIE'
                             const canRequestAlt = item.audioType !== 'DUBLADO_LEGENDADO'
-                            const canSelect = !alreadyRequested && !alreadyPending && canRequestAlt
+                            const canSelect = !alreadyRequested && canRequestAlt
                             const isSelected = selectedLocal?.id === item.id
                             return (
                               <button
@@ -554,9 +549,15 @@ export default function VitrinePage() {
                                   </div>
                                 </div>
                                 <div className="flex-shrink-0 text-right text-xs">
-                                  {alreadyRequested && <span style={{ color: '#60a5fa' }} className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Solicitado</span>}
-                                  {!alreadyRequested && alreadyPending && <span style={{ color: '#9ca3af' }}>Já solicitado</span>}
-                                  {!alreadyRequested && !alreadyPending && !canRequestAlt && <span style={{ color: '#9ca3af' }}>Dub+Leg ✓</span>}
+                                  {alreadyRequested && (
+                                  <span style={{ color: '#60a5fa' }} className="flex flex-col items-end gap-0.5">
+                                    <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Solicitado</span>
+                                    {(requestCounts[item.tmdbId] ?? 1) > 1 && (
+                                      <span style={{ color: '#93c5fd', fontSize: '10px' }}>{requestCounts[item.tmdbId]}× pedidos</span>
+                                    )}
+                                  </span>
+                                )}
+                                  {!alreadyRequested && !canRequestAlt && <span style={{ color: '#9ca3af' }}>Dub+Leg ✓</span>}
                                   {canSelect && <span style={{ color: isSelected ? '#E8500A' : '#4b5563' }}>{isSelected ? '● Selecionado' : 'Selecionar →'}</span>}
                                 </div>
                               </button>
@@ -600,7 +601,14 @@ export default function VitrinePage() {
                                   </div>
                                   <div className="flex-shrink-0 text-right text-xs">
                                     {done
-                                      ? <span style={{ color: '#60a5fa' }} className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Solicitado</span>
+                                      ? (
+                                        <span style={{ color: '#60a5fa' }} className="flex flex-col items-end gap-0.5">
+                                          <span className="flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Solicitado</span>
+                                          {(requestCounts[item.tmdbId] ?? 1) > 1 && (
+                                            <span style={{ color: '#93c5fd', fontSize: '10px' }}>{requestCounts[item.tmdbId]}× pedidos</span>
+                                          )}
+                                        </span>
+                                      )
                                       : <span style={{ color: isSelected ? '#E8500A' : '#4b5563' }}>{isSelected ? '● Selecionado' : 'Selecionar →'}</span>
                                     }
                                   </div>
