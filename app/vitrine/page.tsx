@@ -397,30 +397,32 @@ export default function VitrinePage() {
       />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 16px' }}>
+
         {/* Logo */}
-        <div className="flex justify-center pt-8 pb-4">
-          <img src="/Logo-transparente.png" alt="Encoding Solutions" style={{ width: '200px', maxWidth: '60vw' }} />
+        <div className="flex justify-center pt-6 pb-4">
+          <img src="/Logo-transparente.png" alt="Encoding Solutions" style={{ width: '180px', maxWidth: '55vw' }} />
         </div>
 
         {/* Hero */}
-        <div className="relative overflow-hidden mx-4 rounded-2xl mb-5" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="relative overflow-hidden rounded-2xl mb-4" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{
             position: 'absolute', right: '-60px', top: '-60px',
             width: '260px', height: '260px',
             background: 'radial-gradient(circle, rgba(232,80,10,0.28) 0%, transparent 70%)',
             pointerEvents: 'none',
           }} />
-          <div className="px-6 py-7 relative">
-            <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#E8500A' }}>
+          <div className="px-5 py-5 relative">
+            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#E8500A' }}>
               Central de Solicitações
             </p>
-            <h1 className="text-2xl font-bold text-white mb-1">O que você quer assistir?</h1>
+            <h1 className="text-xl font-bold text-white mb-0.5">O que você quer assistir?</h1>
             <p className="text-sm" style={{ color: '#6b7280' }}>Faça seu pedido — nossa equipe cuida do resto</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="mx-4 mb-5">
+        <div className="mb-4">
           <div className="flex gap-0 rounded-xl p-1" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
             {(['pedido', 'correcao'] as const).map(m => (
               <button
@@ -439,7 +441,7 @@ export default function VitrinePage() {
         </div>
 
         {/* Two-column layout */}
-        <div className="mx-4 mb-10 flex flex-col lg:flex-row gap-4 items-start">
+        <div className="mb-10 flex flex-col md:flex-row gap-4 items-start">
 
           {/* LEFT: search + results */}
           <div className="w-full lg:flex-1 min-w-0">
@@ -670,8 +672,8 @@ export default function VitrinePage() {
             )}
           </div>
 
-          {/* RIGHT: sticky panel */}
-          <div className="w-full lg:w-80 xl:w-96 lg:sticky lg:top-6 flex-shrink-0">
+          {/* RIGHT: sticky panel — desktop only */}
+          <div className="hidden md:block md:sticky md:top-6 flex-shrink-0" style={{ width: '320px' }}>
             <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#181818', border: '1px solid rgba(255,255,255,0.07)' }}>
 
               {!hasSelection ? (
@@ -862,6 +864,148 @@ export default function VitrinePage() {
           </div>
 
         </div>
+
+        </div>{/* end centered container */}
+      </div>
+
+      {/* ── Mobile drawer overlay ── */}
+      <div
+        className="md:hidden fixed inset-0 z-40 transition-opacity duration-300"
+        style={{
+          backgroundColor: 'rgba(0,0,0,0.72)',
+          opacity: hasSelection ? 1 : 0,
+          pointerEvents: hasSelection ? 'auto' : 'none',
+        }}
+        onClick={clearSelection}
+      />
+
+      {/* ── Mobile drawer ── */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 overflow-y-auto rounded-t-2xl"
+        style={{
+          backgroundColor: '#181818',
+          border: '1px solid rgba(255,255,255,0.1)',
+          maxHeight: '82vh',
+          transform: hasSelection ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        }}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
+        </div>
+
+        {!hasSelection ? null : isCorrection && selectedLocal ? (
+          <div className="p-5">
+            <div className="flex items-center gap-3 mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <PosterThumb posterUrl={selectedLocal.posterUrl} title={selectedLocal.title} />
+              <div>
+                <p className="font-semibold text-sm text-white">{selectedLocal.title}</p>
+                <p className="text-xs" style={{ color: '#6b7280' }}>{selectedLocal.year}</p>
+              </div>
+            </div>
+            <CorrectForm
+              item={selectedLocal}
+              type={type}
+              onCancel={clearSelection}
+              onSent={() => {
+                setReported(prev => [...prev, selectedLocal.tmdbId])
+                clearSelection()
+                setFeedbackError(false)
+                setFeedback('Report enviado! Nossa equipe irá verificar.')
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-4 p-5" style={{ backgroundColor: '#111111', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              {selectedPoster
+                ? <img src={selectedPoster} alt={selectedTitle} className="rounded-lg object-cover flex-shrink-0" style={{ width: '72px', height: '108px' }} />
+                : <div className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: '72px', height: '108px', backgroundColor: '#222222' }}><Film className="w-7 h-7 text-gray-600" /></div>
+              }
+              <div className="flex-1 min-w-0 pt-1">
+                <p className="font-bold text-white leading-tight mb-1">{selectedTitle}</p>
+                <p className="text-sm mb-2" style={{ color: '#6b7280' }}>{selectedYear}</p>
+                {selectedLocal && (() => {
+                  const servers = [selectedLocal.hasP1 && 'B2P', selectedLocal.hasP2 && 'P2B'].filter(Boolean) as string[]
+                  const serversLabel = servers.length === 2 ? 'B2P e P2B' : servers.length === 1 ? `Apenas ${servers[0]}` : '—'
+                  const audioLabel = selectedLocal.audioType === 'DUBLADO' ? 'Dublado' : selectedLocal.audioType === 'LEGENDADO' ? 'Legendado' : selectedLocal.audioType === 'DUBLADO_LEGENDADO' ? 'Dublado + Legendado' : null
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap gap-1.5 mb-1">
+                        {selectedLocal.hasP1 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#7c2d1240', color: '#fb923c' }}>B2P</span>}
+                        {selectedLocal.hasP2 && <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#1e3a5f40', color: '#60a5fa' }}>P2B</span>}
+                        <AudioBadge audioType={selectedLocal.audioType} />
+                      </div>
+                      <p className="text-xs" style={{ color: '#6b7280' }}><span style={{ color: '#4b5563' }}>Disponível em:</span> <span className="text-white">✓ {serversLabel}</span></p>
+                      {audioLabel && <p className="text-xs" style={{ color: '#6b7280' }}><span style={{ color: '#4b5563' }}>Versão atual:</span> <span className="text-white">✓ {audioLabel}</span></p>}
+                    </div>
+                  )
+                })()}
+                {selectedTmdb && <div className="flex items-center gap-1"><XCircle className="w-3 h-3 text-red-400" /><span className="text-xs text-red-400">Não disponível</span></div>}
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {isTV && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#4b5563' }}>Tipo de pedido</p>
+                  <div className="space-y-2">
+                    {availableTvOptions.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes('') }}
+                        className="w-full flex flex-col p-3 rounded-xl text-left transition-all"
+                        style={{
+                          backgroundColor: tvMode === opt.value ? '#1f1a0f' : '#111111',
+                          border: tvMode === opt.value ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                        }}
+                      >
+                        <span className="text-sm font-semibold text-white">{opt.label}</span>
+                        <span className="text-xs" style={{ color: '#6b7280' }}>{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {tvMode === 'substitution' && (
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Temporada(s)</p>
+                        <input value={tvSubSeasons} onChange={e => setTvSubSeasons(e.target.value)} placeholder="Ex: T2" className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }} />
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Episódio(s)</p>
+                        <input value={tvSubEpisodes} onChange={e => setTvSubEpisodes(e.target.value)} placeholder="Ex: Ep 1 ao 10" className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }} />
+                      </div>
+                    </div>
+                  )}
+                  {tvNote && <p className="text-xs rounded-lg px-3 py-2 mt-2" style={{ backgroundColor: '#111827', color: '#93c5fd' }}>{tvNote}</p>}
+                </div>
+              )}
+              {!isTV && selectedLocal && (
+                <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
+                  <p className="text-sm font-medium text-white">{selectedLocal.audioType === 'DUBLADO' ? '📝 Versão Legendada' : '🎙️ Versão Dublada'}</p>
+                  <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Uma observação será adicionada automaticamente ao pedido.</p>
+                </div>
+              )}
+              {!isTV && selectedTmdb && (
+                <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
+                  <p className="text-sm font-medium text-white">Adicionar ao catálogo</p>
+                  <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Pedido de inclusão de novo título.</p>
+                </div>
+              )}
+              <div className="flex gap-2 pb-2">
+                <button onClick={clearSelection} className="py-2.5 px-4 rounded-xl text-sm transition" style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#9ca3af' }}>
+                  Cancelar
+                </button>
+                <button onClick={handleConfirm} disabled={panelLoading} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50" style={{ backgroundColor: '#E8500A' }}>
+                  {panelLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar Solicitação'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
