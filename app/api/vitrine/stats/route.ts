@@ -5,20 +5,13 @@ export async function GET() {
   try {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const [pendingAgg, completedAgg] = await Promise.all([
-      prisma.request.aggregate({
-        where: { source: 'VITRINE', status: { not: 'CONCLUIDO' }, createdAt: { gte: startOfMonth } },
-        _sum: { requestCount: true },
+    const [pendingThisMonth, totalCompleted] = await Promise.all([
+      prisma.request.count({
+        where: { status: { not: 'CONCLUIDO' }, createdAt: { gte: startOfMonth } },
       }),
-      prisma.request.aggregate({
-        where: { source: 'VITRINE', status: 'CONCLUIDO' },
-        _sum: { requestCount: true },
-      }),
+      prisma.request.count({ where: { status: 'CONCLUIDO' } }),
     ])
-    return NextResponse.json({
-      pendingThisMonth: pendingAgg._sum.requestCount ?? 0,
-      totalCompleted: completedAgg._sum.requestCount ?? 0,
-    })
+    return NextResponse.json({ pendingThisMonth, totalCompleted })
   } catch {
     return NextResponse.json({ pendingThisMonth: 0, totalCompleted: 0 })
   }

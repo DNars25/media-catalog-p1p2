@@ -19,10 +19,10 @@ export async function POST(req: NextRequest) {
 
     const { title, type, posterUrl, tmdbId, notes, isUpdate, linkedTitleId } = parsed.data
 
-    // Deduplication: any type — if a pending request with same tmdbId exists, just increment requestCount
+    // Deduplication: if any pending request with same tmdbId exists, increment requestCount
     if (tmdbId) {
       const existing = await prisma.request.findFirst({
-        where: { tmdbId, source: 'VITRINE', status: { not: 'CONCLUIDO' } },
+        where: { tmdbId, status: { not: 'CONCLUIDO' } },
         select: { id: true },
       })
       if (existing) {
