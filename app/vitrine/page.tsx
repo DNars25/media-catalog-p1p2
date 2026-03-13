@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search, Film, Tv, CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 type Mode = 'pedido' | 'correcao'
@@ -23,11 +23,6 @@ interface TmdbItem {
   year: string
   poster: string | null
 }
-interface Stats {
-  pendingThisMonth: number
-  totalCompleted: number
-}
-
 function AudioBadge({ audioType }: { audioType: string | null }) {
   if (audioType === 'DUBLADO') return <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Dub</span>
   if (audioType === 'LEGENDADO') return <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: '#4a1d9640', color: '#c084fc' }}>Leg</span>
@@ -219,11 +214,6 @@ export default function VitrinePage() {
   const [tvSubSeasons, setTvSubSeasons] = useState('')
   const [tvSubEpisodes, setTvSubEpisodes] = useState('')
   const [panelLoading, setPanelLoading] = useState(false)
-  const [stats, setStats] = useState<Stats | null>(null)
-
-  useEffect(() => {
-    fetch('/api/vitrine/stats').then(r => r.json()).then(setStats).catch(() => {})
-  }, [])
 
   function clearSelection() {
     setSelectedLocal(null)
@@ -686,22 +676,15 @@ export default function VitrinePage() {
 
               {!hasSelection ? (
                 /* Empty state */
-                <div className="p-6">
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-5" style={{ color: '#4b5563' }}>
-                    {mode === 'pedido' ? 'Selecione um título para solicitar' : 'Selecione um título para reportar'}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3 mb-5">
-                    <div className="rounded-xl p-4" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <p className="text-2xl font-bold text-white">{stats?.pendingThisMonth ?? '—'}</p>
-                      <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Pedidos abertos este mês</p>
-                    </div>
-                    <div className="rounded-xl p-4" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                      <p className="text-2xl font-bold" style={{ color: '#4ade80' }}>{stats?.totalCompleted ?? '—'}</p>
-                      <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Total concluído</p>
-                    </div>
+                <div className="p-8 flex flex-col items-center justify-center text-center" style={{ minHeight: '200px' }}>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <Search className="w-5 h-5" style={{ color: '#4b5563' }} />
                   </div>
-                  <p className="text-xs text-center" style={{ color: '#374151' }}>
-                    ← Busque e selecione um título
+                  <p className="text-sm font-medium text-white mb-1">
+                    {mode === 'pedido' ? 'Nenhum título selecionado' : 'Nenhum título selecionado'}
+                  </p>
+                  <p className="text-xs leading-relaxed" style={{ color: '#4b5563' }}>
+                    Busque um título ao lado e selecione para fazer sua solicitação
                   </p>
                 </div>
               ) : isCorrection && selectedLocal ? (
@@ -834,18 +817,6 @@ export default function VitrinePage() {
                         <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Pedido de inclusão de novo título.</p>
                       </div>
                     )}
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p className="text-xl font-bold text-white">{stats?.pendingThisMonth ?? '—'}</p>
-                        <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Abertos este mês</p>
-                      </div>
-                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p className="text-xl font-bold" style={{ color: '#4ade80' }}>{stats?.totalCompleted ?? '—'}</p>
-                        <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Total concluído</p>
-                      </div>
-                    </div>
 
                     {/* Action buttons */}
                     <div className="flex gap-2">
