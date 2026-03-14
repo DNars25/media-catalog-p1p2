@@ -371,7 +371,7 @@ export default function VitrinePage() {
           customNotes = movieAudioOption === 'legendado'
             ? 'Solicitação de versão LEGENDADA — título já existente no catálogo.'
             : movieAudioOption === 'dublagem_oficial'
-              ? 'Solicitação de versão FHD DUB/LEG — título já existente no catálogo.'
+              ? 'Solicitação de VERSÃO OFICIAL — título já existente no catálogo.'
               : undefined
         }
         sendAltAudio(selectedLocal, customNotes)
@@ -393,7 +393,7 @@ export default function VitrinePage() {
 
   const dubladoOptions = [
     { key: 'legendado' as const, label: 'Solicitar Legendado', icon: <FileText className="w-4 h-4" />, desc: 'Adicionar versão com legendas em português' },
-    { key: 'dublagem_oficial' as const, label: 'Versão FHD Dub/Leg', icon: <Mic className="w-4 h-4" />, desc: 'Solicitar versão em Full HD com dublagem e legendas' },
+    { key: 'dublagem_oficial' as const, label: 'Versão Oficial', icon: <Mic className="w-4 h-4" />, desc: '* Será adicionado conforme disponibilidade nas versões dublada e legendada' },
   ]
 
   const tvOptions: { value: 'new' | 'update' | 'substitution'; label: string; desc: string }[] = [
