@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Search, Film, Tv, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Search, Film, Tv, CheckCircle, XCircle, Loader2, FileText, Mic } from 'lucide-react'
 
 type Mode = 'pedido' | 'correcao'
 type ContentType = 'MOVIE' | 'TV'
@@ -214,6 +214,7 @@ export default function VitrinePage() {
   const [tvSubSeasons, setTvSubSeasons] = useState('')
   const [tvSubEpisodes, setTvSubEpisodes] = useState('')
   const [panelLoading, setPanelLoading] = useState(false)
+  const [movieAudioOption, setMovieAudioOption] = useState<'legendado' | 'dublagem_oficial' | null>(null)
 
   function clearSelection() {
     setSelectedLocal(null)
@@ -221,6 +222,7 @@ export default function VitrinePage() {
     setTvMode('new')
     setTvSubSeasons('')
     setTvSubEpisodes('')
+    setMovieAudioOption(null)
   }
 
   function reset() {
@@ -242,16 +244,17 @@ export default function VitrinePage() {
     return ''
   }
 
-  async function sendAltAudio(item: LocalItem) {
+  async function sendAltAudio(item: LocalItem, customNotes?: string) {
     setPanelLoading(true)
     try {
       const version = item.audioType === 'DUBLADO' ? 'LEGENDADA' : 'DUBLADA'
+      const notes = customNotes ?? `Solicitação de versão ${version} — título já existente no catálogo.`
       const res = await fetch('/api/recepcao-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: item.title, type, posterUrl: item.posterUrl, tmdbId: item.tmdbId,
-          notes: `Solicitação de versão ${version} — título já existente no catálogo.`,
+          notes,
           linkedTitleId: item.id,
         }),
       })
@@ -347,6 +350,7 @@ export default function VitrinePage() {
     if (selectedLocal?.id === item.id) { clearSelection(); return }
     setSelectedLocal(item)
     setSelectedTmdb(null)
+    setMovieAudioOption(null)
     if (item.type === 'TV') { setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes('') }
   }
 
@@ -359,7 +363,19 @@ export default function VitrinePage() {
 
   function handleConfirm() {
     if (selectedLocal) {
-      selectedLocal.type === 'TV' ? sendTvRequest() : sendAltAudio(selectedLocal)
+      if (selectedLocal.type === 'TV') {
+        sendTvRequest()
+      } else {
+        let customNotes: string | undefined
+        if (selectedLocal.audioType === 'DUBLADO') {
+          customNotes = movieAudioOption === 'legendado'
+            ? 'Solicitação de versão LEGENDADA — título já existente no catálogo.'
+            : movieAudioOption === 'dublagem_oficial'
+              ? 'Solicitação de DUBLAGEM OFICIAL — substituir versão atual.'
+              : undefined
+        }
+        sendAltAudio(selectedLocal, customNotes)
+      }
     } else if (selectedTmdb) {
       type === 'TV' ? sendTvRequest() : sendRequest(selectedTmdb)
     }
@@ -372,6 +388,13 @@ export default function VitrinePage() {
   const isCorrection = mode === 'correcao'
   const isTV = selectedLocal ? selectedLocal.type === 'TV' : type === 'TV' && !!selectedTmdb
   const tvNote = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+  const needsAudioChoice = !isTV && !!selectedLocal && selectedLocal.audioType === 'DUBLADO'
+  const confirmDisabled = panelLoading || (needsAudioChoice && !movieAudioOption)
+
+  const dubladoOptions = [
+    { key: 'legendado' as const, label: 'Solicitar Legendado', icon: <FileText className="w-4 h-4" />, desc: 'Adicionar versão com legendas em português' },
+    { key: 'dublagem_oficial' as const, label: 'Solicitar Dublagem Oficial', icon: <Mic className="w-4 h-4" />, desc: 'Substituir por versão com dublagem oficial' },
+  ]
 
   const tvOptions: { value: 'new' | 'update' | 'substitution'; label: string; desc: string }[] = [
     { value: 'new', label: 'Novo título', desc: 'Adicionar série ao catálogo' },
@@ -815,15 +838,36 @@ export default function VitrinePage() {
 
                     {/* MOVIE local: what will be requested */}
                     {!isTV && selectedLocal && (
-                      <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
-                        <p className="text-sm font-medium text-white">
-                          {selectedLocal.audioType === 'DUBLADO' ? '📝 Versão Legendada' : '🎙️ Versão Dublada'}
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
-                          Uma observação será adicionada automaticamente ao pedido.
-                        </p>
-                      </div>
+                      selectedLocal.audioType === 'DUBLADO' ? (
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#4b5563' }}>Tipo de solicitação</p>
+                          <div className="space-y-2">
+                            {dubladoOptions.map(opt => (
+                              <button
+                                key={opt.key}
+                                onClick={() => setMovieAudioOption(opt.key)}
+                                className="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all"
+                                style={{
+                                  backgroundColor: movieAudioOption === opt.key ? '#1f1a0f' : '#111111',
+                                  border: movieAudioOption === opt.key ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                                }}
+                              >
+                                <span className="mt-0.5" style={{ color: movieAudioOption === opt.key ? '#E8500A' : '#4b5563' }}>{opt.icon}</span>
+                                <div>
+                                  <p className="text-sm font-semibold text-white">{opt.label}</p>
+                                  <p className="text-xs" style={{ color: '#6b7280' }}>{opt.desc}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                          <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
+                          <p className="text-sm font-medium text-white">🎙️ Versão Dublada</p>
+                          <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Uma observação será adicionada automaticamente ao pedido.</p>
+                        </div>
+                      )
                     )}
 
                     {/* MOVIE tmdb */}
@@ -846,7 +890,7 @@ export default function VitrinePage() {
                       </button>
                       <button
                         onClick={handleConfirm}
-                        disabled={panelLoading}
+                        disabled={confirmDisabled}
                         className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
                         style={{ backgroundColor: '#E8500A' }}
                       >
@@ -982,11 +1026,36 @@ export default function VitrinePage() {
                 </div>
               )}
               {!isTV && selectedLocal && (
-                <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
-                  <p className="text-sm font-medium text-white">{selectedLocal.audioType === 'DUBLADO' ? '📝 Versão Legendada' : '🎙️ Versão Dublada'}</p>
-                  <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Uma observação será adicionada automaticamente ao pedido.</p>
-                </div>
+                selectedLocal.audioType === 'DUBLADO' ? (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#4b5563' }}>Tipo de solicitação</p>
+                    <div className="space-y-2">
+                      {dubladoOptions.map(opt => (
+                        <button
+                          key={opt.key}
+                          onClick={() => setMovieAudioOption(opt.key)}
+                          className="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all"
+                          style={{
+                            backgroundColor: movieAudioOption === opt.key ? '#1f1a0f' : '#111111',
+                            border: movieAudioOption === opt.key ? '1px solid #E8500A' : '1px solid rgba(255,255,255,0.07)',
+                          }}
+                        >
+                          <span className="mt-0.5" style={{ color: movieAudioOption === opt.key ? '#E8500A' : '#4b5563' }}>{opt.icon}</span>
+                          <div>
+                            <p className="text-sm font-semibold text-white">{opt.label}</p>
+                            <p className="text-xs" style={{ color: '#6b7280' }}>{opt.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: '#4b5563' }}>Solicitação</p>
+                    <p className="text-sm font-medium text-white">🎙️ Versão Dublada</p>
+                    <p className="text-xs mt-1" style={{ color: '#6b7280' }}>Uma observação será adicionada automaticamente ao pedido.</p>
+                  </div>
+                )
               )}
               {!isTV && selectedTmdb && (
                 <div className="rounded-xl p-3" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -999,7 +1068,7 @@ export default function VitrinePage() {
                 <button onClick={clearSelection} className="py-2.5 px-4 rounded-xl text-sm transition" style={{ border: '1px solid rgba(255,255,255,0.07)', color: '#9ca3af' }}>
                   Cancelar
                 </button>
-                <button onClick={handleConfirm} disabled={panelLoading} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50" style={{ backgroundColor: '#E8500A' }}>
+                <button onClick={handleConfirm} disabled={confirmDisabled} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50" style={{ backgroundColor: '#E8500A' }}>
                   {panelLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar Solicitação'}
                 </button>
               </div>
