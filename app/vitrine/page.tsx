@@ -213,6 +213,8 @@ export default function VitrinePage() {
   const [tvMode, setTvMode] = useState<'new' | 'update' | 'substitution'>('new')
   const [tvSubSeasons, setTvSubSeasons] = useState('')
   const [tvSubEpisodes, setTvSubEpisodes] = useState('')
+  const [tvUpdateFromSeason, setTvUpdateFromSeason] = useState('')
+  const [tvUpdateFromEpisode, setTvUpdateFromEpisode] = useState('')
   const [panelLoading, setPanelLoading] = useState(false)
   const [movieAudioOption, setMovieAudioOption] = useState<'legendado' | 'dublagem_oficial' | null>(null)
 
@@ -222,6 +224,8 @@ export default function VitrinePage() {
     setTvMode('new')
     setTvSubSeasons('')
     setTvSubEpisodes('')
+    setTvUpdateFromSeason('')
+    setTvUpdateFromEpisode('')
     setMovieAudioOption(null)
   }
 
@@ -233,8 +237,16 @@ export default function VitrinePage() {
     clearSelection()
   }
 
-  function buildTvNote(m: 'new' | 'update' | 'substitution', seasons: string, eps: string): string {
-    if (m === 'update') return 'Solicitação de atualização de episódios/temporadas.'
+  function buildTvNote(m: 'new' | 'update' | 'substitution', seasons: string, eps: string, fromSeason: string, fromEpisode: string): string {
+    if (m === 'update') {
+      const parts = [
+        fromSeason.trim() ? `a partir de ${fromSeason.trim()}` : '',
+        fromEpisode.trim(),
+      ].filter(Boolean)
+      return parts.length
+        ? `Solicitação de atualização — ${parts.join(', ')}.`
+        : 'Solicitação de atualização.'
+    }
     if (m === 'substitution') {
       const parts = [seasons.trim(), eps.trim()].filter(Boolean)
       return parts.length
@@ -351,14 +363,14 @@ export default function VitrinePage() {
     setSelectedLocal(item)
     setSelectedTmdb(null)
     setMovieAudioOption(null)
-    if (item.type === 'TV') { setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes('') }
+    if (item.type === 'TV') { setTvMode('update'); setTvSubSeasons(''); setTvSubEpisodes(''); setTvUpdateFromSeason(''); setTvUpdateFromEpisode('') }
   }
 
   function handleSelectTmdb(item: TmdbItem) {
     if (selectedTmdb?.tmdbId === item.tmdbId) { clearSelection(); return }
     setSelectedTmdb(item)
     setSelectedLocal(null)
-    if (type === 'TV') { setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes('') }
+    if (type === 'TV') { setTvMode('new'); setTvSubSeasons(''); setTvSubEpisodes(''); setTvUpdateFromSeason(''); setTvUpdateFromEpisode('') }
   }
 
   function handleConfirm() {
@@ -387,7 +399,7 @@ export default function VitrinePage() {
   const hasSelection = !!(selectedLocal || selectedTmdb)
   const isCorrection = mode === 'correcao'
   const isTV = selectedLocal ? selectedLocal.type === 'TV' : type === 'TV' && !!selectedTmdb
-  const tvNote = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+  const tvNote = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes, tvUpdateFromSeason, tvUpdateFromEpisode)
   const needsAudioChoice = !isTV && !!selectedLocal && selectedLocal.audioType === 'DUBLADO'
   const confirmDisabled = panelLoading || (needsAudioChoice && !movieAudioOption)
 
@@ -790,7 +802,7 @@ export default function VitrinePage() {
                           {availableTvOptions.map(opt => (
                             <button
                               key={opt.value}
-                              onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes('') }}
+                              onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes(''); setTvUpdateFromSeason(''); setTvUpdateFromEpisode('') }}
                               className="w-full flex flex-col p-3 rounded-xl text-left transition-all"
                               style={{
                                 backgroundColor: tvMode === opt.value ? '#1f1a0f' : '#111111',
@@ -803,6 +815,31 @@ export default function VitrinePage() {
                           ))}
                         </div>
 
+                        {tvMode === 'update' && (
+                          <div className="grid grid-cols-2 gap-2 mt-3">
+                            <div>
+                              <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>A partir da temporada</p>
+                              <input
+                                value={tvUpdateFromSeason}
+                                onChange={e => setTvUpdateFromSeason(e.target.value)}
+                                placeholder="Ex: T6"
+                                className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                                style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>A partir do episódio</p>
+                              <input
+                                value={tvUpdateFromEpisode}
+                                onChange={e => setTvUpdateFromEpisode(e.target.value)}
+                                placeholder="Ex: Ep 3"
+                                className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
+                                style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
                         {tvMode === 'substitution' && (
                           <div className="grid grid-cols-2 gap-2 mt-3">
                             <div>
@@ -810,7 +847,7 @@ export default function VitrinePage() {
                               <input
                                 value={tvSubSeasons}
                                 onChange={e => setTvSubSeasons(e.target.value)}
-                                placeholder="Ex: T2"
+                                placeholder="Ex: T1, T2"
                                 className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none"
                                 style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }}
                               />
@@ -998,7 +1035,7 @@ export default function VitrinePage() {
                     {availableTvOptions.map(opt => (
                       <button
                         key={opt.value}
-                        onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes('') }}
+                        onClick={() => { setTvMode(opt.value); setTvSubSeasons(''); setTvSubEpisodes(''); setTvUpdateFromSeason(''); setTvUpdateFromEpisode('') }}
                         className="w-full flex flex-col p-3 rounded-xl text-left transition-all"
                         style={{
                           backgroundColor: tvMode === opt.value ? '#1f1a0f' : '#111111',
@@ -1010,11 +1047,23 @@ export default function VitrinePage() {
                       </button>
                     ))}
                   </div>
+                  {tvMode === 'update' && (
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>A partir da temporada</p>
+                        <input value={tvUpdateFromSeason} onChange={e => setTvUpdateFromSeason(e.target.value)} placeholder="Ex: T6" className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }} />
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>A partir do episódio</p>
+                        <input value={tvUpdateFromEpisode} onChange={e => setTvUpdateFromEpisode(e.target.value)} placeholder="Ex: Ep 3" className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }} />
+                      </div>
+                    </div>
+                  )}
                   {tvMode === 'substitution' && (
                     <div className="grid grid-cols-2 gap-2 mt-3">
                       <div>
                         <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Temporada(s)</p>
-                        <input value={tvSubSeasons} onChange={e => setTvSubSeasons(e.target.value)} placeholder="Ex: T2" className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }} />
+                        <input value={tvSubSeasons} onChange={e => setTvSubSeasons(e.target.value)} placeholder="Ex: T1, T2" className="w-full rounded-lg px-3 py-2 text-sm text-white focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid rgba(255,255,255,0.07)' }} />
                       </div>
                       <div>
                         <p className="text-xs mb-1" style={{ color: '#9ca3af' }}>Episódio(s)</p>
