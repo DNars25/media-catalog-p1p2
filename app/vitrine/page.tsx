@@ -291,7 +291,7 @@ export default function VitrinePage() {
     if (!item) return
     setPanelLoading(true)
     try {
-      const notes = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes)
+      const notes = buildTvNote(tvMode, tvSubSeasons, tvSubEpisodes, tvUpdateFromSeason, tvUpdateFromEpisode)
       const posterUrl = 'posterUrl' in item ? item.posterUrl : item.poster
       const linkedTitleId = selectedLocal ? selectedLocal.id : null
       const res = await fetch('/api/recepcao-request', {
